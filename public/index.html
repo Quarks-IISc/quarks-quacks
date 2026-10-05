@@ -18,7 +18,7 @@
     <button class="nav-toggle" id="nav-toggle" aria-label="Menu"><i class="fas fa-bars"></i></button>
     <div class="nav-links" id="nav-links">
       <a href="#home" data-nav="home"><i class="fas fa-home"></i> Home</a>
-      <a href="#home" data-scroll="lb-section"><i class="fas fa-trophy"></i> Leaderboard</a>
+      <a href="#home" data-scroll="lb-section" class="pre-event-hide"><i class="fas fa-trophy"></i> Leaderboard</a>
       <a href="#register" data-nav="register" data-guest><i class="fas fa-user-plus"></i> Register</a>
       <a href="#login" data-nav="login" data-guest><i class="fas fa-sign-in-alt"></i> Login</a>
       <a href="#dashboard" data-nav="dashboard" data-auth><i class="fas fa-tachometer-alt"></i> Dashboard</a>
@@ -44,14 +44,27 @@
           <p class="hero-tagline">One day. Six clubs. Twenty-seven events. Infinite fun.</p>
         </div>
 
+        <!-- Countdown -->
+        <div class="countdown" id="countdown">
+          <div class="countdown-label">Quacks begins in</div>
+          <div class="countdown-boxes">
+            <div class="countdown-box"><span class="countdown-num" id="qp-days">--</span><span class="countdown-unit">Days</span></div>
+            <div class="countdown-box"><span class="countdown-num" id="qp-hours">--</span><span class="countdown-unit">Hours</span></div>
+            <div class="countdown-box"><span class="countdown-num" id="qp-mins">--</span><span class="countdown-unit">Minutes</span></div>
+            <div class="countdown-box"><span class="countdown-num" id="qp-secs">--</span><span class="countdown-unit">Seconds</span></div>
+          </div>
+          <p class="countdown-soon">Coming Soon</p>
+          <p class="countdown-info">You will be able to register your teams for competitions and earn points on this page.</p>
+        </div>
+
         <!-- Quick links -->
         <div class="quick-links">
-          <button type="button" class="quick-link-btn" id="home-schedule-btn">
-            <i class="fas fa-calendar-day"></i> Qu<span class="pixel-strike">a</span>ick Schedule
-          </button>
           <a href="https://quarks.ug.iisc.ac.in/quacks/" target="_blank" rel="noopener" class="quick-link-btn">
             <i class="fas fa-star"></i> Quarks Quacks
           </a>
+          <button type="button" class="quick-link-btn" id="home-schedule-btn">
+            <i class="fas fa-calendar-day"></i> Qu<span class="pixel-strike">a</span>ick Schedule
+          </button>
           <a href="https://whatsapp.com/channel/0029Vb8qihZ1HsppFp6b2m3b" target="_blank" rel="noopener" class="quick-link-btn quick-link-wa">
             <i class="fab fa-whatsapp"></i> Follow on WhatsApp
           </a>
@@ -68,7 +81,7 @@
         </div>
 
         <!-- CTA -->
-        <div class="cta-card" id="home-cta">
+        <div class="cta-card pre-event-hide" id="home-cta">
           <div class="cta-icon"><i class="fas fa-qrcode"></i></div>
           <h2>Join the Point Hunt</h2>
           <p>Register your team, collect QR-based points across events, and climb the leaderboard!</p>
@@ -131,7 +144,7 @@
         </div>
 
         <!-- Embedded Leaderboard -->
-        <div class="home-section" id="lb-section">
+        <div class="home-section pre-event-hide" id="lb-section">
           <h2 class="section-title"><i class="fas fa-trophy"></i> Leaderboard</h2>
           <div class="card card-wide">
             <div class="table-wrap">

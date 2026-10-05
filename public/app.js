@@ -82,6 +82,14 @@
     navLinks.querySelectorAll('[data-guest]').forEach(function (el) {
       el.style.display = loggedIn ? 'none' : '';
     });
+    // Hide register + leaderboard nav pre-event, keep login
+    if (!isLive) {
+      var regNav = navLinks.querySelector('[data-nav="register"]');
+      if (regNav) regNav.style.display = 'none';
+      navLinks.querySelectorAll('.pre-event-hide').forEach(function (el) {
+        el.style.display = 'none';
+      });
+    }
     navLinks.querySelectorAll('[data-nav]').forEach(function (el) {
       el.classList.toggle('is-active', '#' + el.dataset.nav === location.hash);
     });
@@ -863,10 +871,75 @@
     return d.toLocaleDateString();
   }
 
+  // ---- Countdown ----
+
+  var EVENT_DATE = new Date('2026-10-11T00:00:00+05:30').getTime();
+  var isLive = Date.now() >= EVENT_DATE;
+
+  function pad(n) { return n < 10 ? '0' + n : n; }
+
+  function startCountdown() {
+    var wrap = document.getElementById('countdown');
+    if (!wrap) return;
+    var dEl = document.getElementById('qp-days');
+    var hEl = document.getElementById('qp-hours');
+    var mEl = document.getElementById('qp-mins');
+    var sEl = document.getElementById('qp-secs');
+
+    function tick() {
+      var diff = EVENT_DATE - Date.now();
+      if (diff <= 0) {
+        wrap.classList.add('is-live');
+        goLive();
+        return;
+      }
+      dEl.textContent = pad(Math.floor(diff / 86400000));
+      hEl.textContent = pad(Math.floor((diff % 86400000) / 3600000));
+      mEl.textContent = pad(Math.floor((diff % 3600000) / 60000));
+      sEl.textContent = pad(Math.floor((diff % 60000) / 1000));
+    }
+    tick();
+    setInterval(tick, 1000);
+
+    // Shuffle animation on click
+    wrap.addEventListener('click', function (e) {
+      var box = e.target.closest('.countdown-box');
+      if (!box) return;
+      var numEl = box.querySelector('.countdown-num');
+      if (!numEl || numEl.dataset.shuffling) return;
+      numEl.dataset.shuffling = '1';
+      var real = numEl.textContent;
+      var count = 0;
+      var iv = setInterval(function () {
+        numEl.textContent = pad(Math.floor(Math.random() * 100));
+        numEl.style.color = 'hsl(' + (count * 30 % 360) + ', 60%, 65%)';
+        count++;
+        if (count >= 10) {
+          clearInterval(iv);
+          numEl.textContent = real;
+          numEl.style.color = '';
+          delete numEl.dataset.shuffling;
+        }
+      }, 60);
+    });
+  }
+
+  function goLive() {
+    isLive = true;
+    document.querySelectorAll('.pre-event-hide').forEach(function (el) {
+      el.classList.remove('pre-event-hide');
+    });
+    var cd = document.getElementById('countdown');
+    if (cd) cd.classList.add('is-live');
+    updateNav();
+  }
+
   // ---- Init ----
 
   async function init() {
     await checkAuth();
+    if (isLive) goLive();
+    else startCountdown();
     updateNav();
     route();
   }
