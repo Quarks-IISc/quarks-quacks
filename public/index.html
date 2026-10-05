@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quarks Quacks — Points</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <a href="#home" class="nav-brand">Quarks <span>Quacks</span></a>
+    <button class="nav-toggle" id="nav-toggle" aria-label="Menu"><i class="fas fa-bars"></i></button>
+    <div class="nav-links" id="nav-links">
+      <a href="#home" data-nav="home"><i class="fas fa-home"></i> Home</a>
+      <a href="#home" data-scroll="lb-section"><i class="fas fa-trophy"></i> Leaderboard</a>
+      <a href="#register" data-nav="register" data-guest><i class="fas fa-user-plus"></i> Register</a>
+      <a href="#login" data-nav="login" data-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      <a href="#dashboard" data-nav="dashboard" data-auth><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="#" id="logout-btn" data-auth><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+  </nav>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- VIEWS -->
+  <main class="main main-home">
+
+    <!-- HOME -->
+    <section class="view" id="view-home">
+      <div class="fade-in">
+
+        <!-- Hero -->
+        <div class="hero">
+          <p class="hero-date"><i class="fas fa-calendar-alt"></i> 11 October 2026</p>
+          <h1 class="hero-title">Quarks <span>Quacks</span></h1>
+          <p class="hero-sub">Creative Carnival</p>
+          <p class="hero-tagline">One day. Six clubs. Twenty-seven events. Infinite fun.</p>
+        </div>
+
+        <!-- Quick links -->
+        <div class="quick-links">
+          <button type="button" class="quick-link-btn" id="home-schedule-btn">
+            <i class="fas fa-calendar-day"></i> Qu<span class="pixel-strike">a</span>ick Schedule
+          </button>
+          <a href="https://quarks.ug.iisc.ac.in/quacks/" target="_blank" rel="noopener" class="quick-link-btn">
+            <i class="fas fa-star"></i> Quarks Quacks
+          </a>
+          <a href="https://whatsapp.com/channel/0029Vb8qihZ1HsppFp6b2m3b" target="_blank" rel="noopener" class="quick-link-btn quick-link-wa">
+            <i class="fab fa-whatsapp"></i> Follow on WhatsApp
+          </a>
+        </div>
+
+        <!-- Schedule popup -->
+        <div class="schedule-overlay" id="schedule-overlay">
+          <div class="schedule-popup">
+            <button type="button" class="schedule-close" id="schedule-close"><i class="fas fa-times"></i></button>
+            <h2 class="schedule-heading">Qu<span class="pixel-strike">a</span>ick Schedule</h2>
+            <div class="schedule-legend" id="schedule-legend"></div>
+            <ul class="schedule-list" id="schedule-list"></ul>
+          </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-card" id="home-cta">
+          <div class="cta-icon"><i class="fas fa-qrcode"></i></div>
+          <h2>Join the Point Hunt</h2>
+          <p>Register your team, collect QR-based points across events, and climb the leaderboard!</p>
+          <div class="cta-buttons" id="cta-guest">
+            <a href="#register" class="btn cta-btn"><i class="fas fa-user-plus"></i> Register Team</a>
+            <a href="#login" class="btn btn-outline cta-btn"><i class="fas fa-sign-in-alt"></i> Already registered? Login</a>
+          </div>
+          <div class="cta-buttons" id="cta-auth" style="display:none">
+            <a href="#dashboard" class="btn cta-btn"><i class="fas fa-tachometer-alt"></i> Go to Dashboard</a>
+          </div>
+        </div>
+
+        <!-- Explore Quarks -->
+        <div class="home-section">
+          <h2 class="section-title"><i class="fas fa-compass"></i> Explore Quarks</h2>
+          <div class="explore-grid">
+            <a href="https://quarks.ug.iisc.ac.in/poems/" target="_blank" rel="noopener" class="explore-card">
+              <img class="explore-card-img" src="https://quarks.ug.iisc.ac.in/assets/images/Poems/a_walk_of_life.jpg" alt="Poems" loading="lazy" />
+              <div class="explore-card-body">
+                <span class="explore-card-title">Poems</span>
+                <span class="explore-card-desc">Verses from IISc writers</span>
+              </div>
+            </a>
+            <a href="https://quarks.ug.iisc.ac.in/stories/" target="_blank" rel="noopener" class="explore-card">
+              <img class="explore-card-img" src="https://quarks.ug.iisc.ac.in/assets/images/Stories/and_the_journey_continues.jpg" alt="Stories" loading="lazy" />
+              <div class="explore-card-body">
+                <span class="explore-card-title">Stories</span>
+                <span class="explore-card-desc">Tales and narratives from campus</span>
+              </div>
+            </a>
+            <a href="https://quarks.ug.iisc.ac.in/crosswords/" target="_blank" rel="noopener" class="explore-card">
+              <img class="explore-card-img" src="https://quarks.ug.iisc.ac.in/assets/images/crosswords/mini-5_1.png" alt="Crosswords" loading="lazy" />
+              <div class="explore-card-body">
+                <span class="explore-card-title">Crosswords</span>
+                <span class="explore-card-desc">Puzzles to test your wits</span>
+              </div>
+            </a>
+            <a href="https://quarks.ug.iisc.ac.in/gallery/" target="_blank" rel="noopener" class="explore-card">
+              <img class="explore-card-img" src="https://quarks.ug.iisc.ac.in/assets/images/Pictures/Bloom_by_the_river-Shreya_Pithva.jpg" alt="Gallery" loading="lazy" />
+              <div class="explore-card-body">
+                <span class="explore-card-title">Gallery</span>
+                <span class="explore-card-desc">Photography from our community</span>
+              </div>
+            </a>
+            <a href="https://quarks.ug.iisc.ac.in/blog/" target="_blank" rel="noopener" class="explore-card">
+              <img class="explore-card-img" src="https://quarks.ug.iisc.ac.in/assets/images/Stories/anthropology_redefined.jpg" alt="Articles" loading="lazy" />
+              <div class="explore-card-body">
+                <span class="explore-card-title">Articles</span>
+                <span class="explore-card-desc">Long-form writing &amp; essays</span>
+              </div>
+            </a>
+            <a href="https://quarks.ug.iisc.ac.in/post-office/" target="_blank" rel="noopener" class="explore-card">
+              <img class="explore-card-img explore-card-img--icon" src="https://quarks.ug.iisc.ac.in/assets/images/quarks-quacks/duck.svg" alt="Post Office" loading="lazy" />
+              <div class="explore-card-body">
+                <span class="explore-card-title">Post Office</span>
+                <span class="explore-card-desc">Send anonymous letters</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Embedded Leaderboard -->
+        <div class="home-section" id="lb-section">
+          <h2 class="section-title"><i class="fas fa-trophy"></i> Leaderboard</h2>
+          <div class="card card-wide">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Team</th><th>Points</th></tr></thead>
+                <tbody id="home-lb-body">
+                  <tr><td colspan="3" class="text-dim">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- LOGIN -->
+    <section class="view" id="view-login">
+      <div class="card card-narrow fade-in">
+        <h1>Team Login</h1>
+        <p class="card-sub">Find your team to view your dashboard, QR code, and registered events.</p>
+        <form id="team-login-form" autocomplete="on">
+          <label>Team Name
+            <input type="text" name="team_name" required placeholder="Enter your registered team name" autocomplete="organization" />
+          </label>
+          <button type="submit" class="btn"><i class="fas fa-search"></i> Find My Team</button>
+        </form>
+        <div class="login-divider"><span>or</span></div>
+        <details class="admin-login-details">
+          <summary>Admin / Staff Login</summary>
+          <form id="login-form" autocomplete="on">
+            <label>Username
+              <input type="text" name="username" required autocomplete="username" />
+            </label>
+            <label>Password
+              <input type="password" name="password" required autocomplete="current-password" />
+            </label>
+            <button type="submit" class="btn">Login</button>
+          </form>
+        </details>
+        <p class="card-foot">New team? <a href="#register">Register here</a></p>
+      </div>
+    </section>
+
+    <!-- REGISTER -->
+    <section class="view" id="view-register">
+      <div class="card card-narrow fade-in">
+        <h1>Register Team</h1>
+        <p class="card-sub"><span class="required-hint">* required</span></p>
+        <form id="register-form" autocomplete="off">
+          <label>Team Name *
+            <input type="text" name="team_name" required maxlength="60" />
+          </label>
+          <fieldset id="members-fieldset">
+            <legend>Members <small>(1–3)</small></legend>
+            <div class="member-row-stack" data-idx="0">
+              <div class="member-row-header">
+                <span class="member-num">Member 1</span>
+                <label class="captain-label"><input type="radio" name="captain" value="0" checked /> Captain</label>
+              </div>
+              <div class="member-row-pair">
+                <input type="text" name="m0_name" placeholder="Name *" required />
+                <input type="text" name="m0_dept" placeholder="Dept. / Where from?" />
+              </div>
+              <input type="email" name="m0_email" placeholder="Email *" />
+            </div>
+          </fieldset>
+          <button type="button" class="btn btn-outline" id="add-member-btn"><i class="fas fa-plus"></i> Add Member</button>
+          <button type="submit" class="btn">Register</button>
+        </form>
+        <p class="card-foot">Already registered? <a href="#login">Login</a></p>
+      </div>
+    </section>
+
+    <!-- OTP VERIFY -->
+    <section class="view" id="view-verify">
+      <div class="card card-narrow fade-in">
+        <h1>Verify OTP</h1>
+        <p class="card-sub" id="verify-msg">Enter the 6-digit code sent to your captain's email.</p>
+        <form id="verify-form" autocomplete="off">
+          <input type="hidden" name="email" id="verify-email" />
+          <label>OTP Code
+            <input type="text" name="otp" required maxlength="6" pattern="\d{6}" inputmode="numeric" class="otp-input" />
+          </label>
+          <button type="submit" class="btn">Verify</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- PARTICIPANT DASHBOARD -->
+    <section class="view" id="view-participant">
+      <div class="fade-in">
+        <div class="dash-header">
+          <h1 id="p-team-name">—</h1>
+          <div class="points-big" id="p-points">0</div>
+          <span class="points-label">points</span>
+        </div>
+        <div class="dash-grid">
+          <div class="card qr-card">
+            <h2>Your QR Code</h2>
+            <p class="card-sub">Show this to event admins</p>
+            <div class="qr-frame" id="p-qr"></div>
+            <button type="button" class="btn btn-outline btn-sm" id="claim-qr-btn" style="margin-top:0.8rem"><i class="fas fa-qrcode"></i> Scan Points QR</button>
+            <div id="claim-qr-reader" class="qr-reader"></div>
+          </div>
+          <div class="card">
+            <h2>Team Members</h2>
+            <ul class="member-list" id="p-members"></ul>
+          </div>
+          <div class="card card-wide">
+            <h2><i class="fas fa-calendar-check"></i> Registered Events</h2>
+            <p class="card-sub">Events your team has signed up for</p>
+            <div id="p-registered-events" class="event-tag-list"></div>
+            <details class="event-register-details">
+              <summary><i class="fas fa-plus"></i> Register for an event</summary>
+              <div class="event-picker" id="p-event-picker"></div>
+            </details>
+          </div>
+          <div class="card card-wide">
+            <h2>Point History</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Points</th><th>Reason</th><th>When</th></tr></thead>
+                <tbody id="p-history"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EVENT DETAIL POPUP -->
+    <div class="event-overlay" id="event-overlay">
+      <div class="event-popup">
+        <button type="button" class="schedule-close" id="event-close"><i class="fas fa-times"></i></button>
+        <h2 class="event-popup-title" id="event-popup-title"></h2>
+        <span class="event-popup-tag" id="event-popup-tag"></span>
+        <div class="event-popup-body" id="event-popup-body">
+          <p class="text-dim">Loading details…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMIN / SUPERUSER DASHBOARD (unified) -->
+    <section class="view" id="view-admin">
+      <div class="fade-in">
+        <div class="dash-header">
+          <h1>Dashboard</h1>
+          <p class="card-sub" id="a-scope">—</p>
+        </div>
+
+        <div class="su-tabs" id="admin-tabs">
+          <button class="su-tab is-active" data-tab="admin-award">Award Points</button>
+          <button class="su-tab" data-tab="admin-teams">Teams</button>
+          <button class="su-tab su-only" data-tab="admin-manage" style="display:none">Manage Admins</button>
+          <button class="su-tab su-only" data-tab="admin-register" style="display:none">Register Team</button>
+        </div>
+
+        <!-- Award Points tab -->
+        <div class="su-panel" id="admin-award">
+          <div class="card">
+            <h2>Award Points</h2>
+            <form id="award-form" autocomplete="off">
+              <label>Team
+                <div class="autocomplete-wrap">
+                  <input type="text" id="a-team-search" placeholder="Start typing team name…" required autocomplete="off" />
+                  <input type="hidden" name="team_id" id="a-team-id" />
+                  <div class="autocomplete-list" id="a-team-suggestions"></div>
+                </div>
+              </label>
+              <div id="qr-reader" class="qr-reader"></div>
+              <label>Points
+                <input type="number" name="points" required min="1" />
+              </label>
+              <label>Reason
+                <input type="text" name="reason" required maxlength="120" />
+              </label>
+              <div class="award-actions">
+                <button type="submit" class="btn">Award Directly</button>
+                <button type="button" class="btn btn-outline" id="gen-qr-btn"><i class="fas fa-qrcode"></i> Generate QR</button>
+              </div>
+            </form>
+            <div id="points-qr-result" style="display:none;text-align:center;margin-top:1rem">
+              <p id="points-qr-label" style="margin-bottom:0.5rem;font-size:0.85rem;color:var(--text-dim)"></p>
+              <div class="qr-frame"><img id="points-qr-img" alt="Points QR" /></div>
+              <p style="font-size:0.78rem;color:var(--text-dim);margin-top:0.5rem">Show this QR to the team to scan</p>
+            </div>
+          </div>
+          <div class="card card-wide">
+            <h2>Recent Awards</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Team</th><th>Points</th><th>Reason</th><th>When</th></tr></thead>
+                <tbody id="a-history"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teams tab -->
+        <div class="su-panel" id="admin-teams" style="display:none">
+          <div class="card card-wide">
+            <h2>All Teams</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Team</th><th>Points</th><th>Verified</th><th>Members</th></tr></thead>
+                <tbody id="su-team-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Manage Admins tab (superuser only) -->
+        <div class="su-panel su-only" id="admin-manage" style="display:none">
+          <div class="card">
+            <h2>Create Admin</h2>
+            <form id="create-admin-form" autocomplete="off">
+              <label>Username
+                <input type="text" name="username" required />
+              </label>
+              <label>Password
+                <input type="password" name="password" required minlength="4" />
+              </label>
+              <label>Event
+                <select name="event_id" id="su-event-select" required></select>
+              </label>
+              <button type="submit" class="btn">Create Admin</button>
+            </form>
+          </div>
+          <div class="card card-wide">
+            <h2>Admins</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Username</th><th>Event</th><th></th></tr></thead>
+                <tbody id="su-admin-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Register Team tab (superuser only) -->
+        <div class="su-panel su-only" id="admin-register" style="display:none">
+          <div class="card card-narrow">
+            <h2>Register Team</h2>
+            <form id="su-register-form" autocomplete="off">
+              <label>Team Name *
+                <input type="text" name="team_name" required maxlength="60" />
+              </label>
+              <fieldset id="su-members-fieldset">
+                <legend>Members <small>(1–3)</small></legend>
+                <div class="member-row-stack" data-idx="0">
+                  <div class="member-row-header">
+                    <span class="member-num">Member 1</span>
+                    <label class="captain-label"><input type="radio" name="captain" value="0" checked /> Captain</label>
+                  </div>
+                  <div class="member-row-pair">
+                    <input type="text" name="m0_name" placeholder="Name *" required />
+                    <input type="text" name="m0_dept" placeholder="Dept. / Where from?" />
+                  </div>
+                  <input type="email" name="m0_email" placeholder="Email *" />
+                </div>
+              </fieldset>
+              <button type="button" class="btn btn-outline su-add-member-btn"><i class="fas fa-plus"></i> Add Member</button>
+              <button type="submit" class="btn">Register</button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- LEADERBOARD (standalone) -->
+    <section class="view" id="view-leaderboard">
+      <div class="fade-in">
+        <div class="dash-header">
+          <h1><i class="fas fa-trophy"></i> Leaderboard</h1>
+        </div>
+        <div class="card card-wide">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Team</th><th>Points</th></tr></thead>
+              <tbody id="lb-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>Quarks Quacks 2026 · <a href="https://quarks.ug.iisc.ac.in" target="_blank" rel="noopener">quarks.ug.iisc.ac.in</a></p>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

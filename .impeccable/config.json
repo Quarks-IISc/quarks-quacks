@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-10-05T21:18:01.712Z",
+        "reason": "Inter is the body font; Caveat carries the personality — deliberate pairing"
+      },
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          "public/style.css"
+        ],
+        "createdAt": "2026-10-05T21:18:04.953Z",
+        "reason": "Pixel-art strikethrough effect — intentional retro motif"
+      }
+    ]
+  }
+}
