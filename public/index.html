@@ -19,8 +19,7 @@
     <div class="nav-links" id="nav-links">
       <a href="#home" data-nav="home"><i class="fas fa-home"></i> Home</a>
       <a href="#home" data-scroll="lb-section" class="pre-event-hide"><i class="fas fa-trophy"></i> Leaderboard</a>
-      <a href="#register" data-nav="register" data-guest><i class="fas fa-user-plus"></i> Register</a>
-      <a href="#login" data-nav="login" data-guest><i class="fas fa-sign-in-alt"></i> Login</a>
+      <a href="#login" data-nav="login" data-guest><i class="fas fa-sign-in-alt"></i> Login / Sign Up</a>
       <a href="#dashboard" data-nav="dashboard" data-auth><i class="fas fa-tachometer-alt"></i> Dashboard</a>
       <a href="#" id="logout-btn" data-auth><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
@@ -86,7 +85,7 @@
           <h2>Join the Point Hunt</h2>
           <p>Register your team, collect QR-based points across events, and climb the leaderboard!</p>
           <div class="cta-buttons" id="cta-guest">
-            <a href="#register" class="btn cta-btn"><i class="fas fa-user-plus"></i> Register Team</a>
+            <a href="#login" class="btn cta-btn" data-open-tab="register-panel"><i class="fas fa-user-plus"></i> Register Team</a>
             <a href="#login" class="btn btn-outline cta-btn"><i class="fas fa-sign-in-alt"></i> Already registered? Login</a>
           </div>
           <div class="cta-buttons" id="cta-auth" style="display:none">
@@ -161,61 +160,62 @@
       </div>
     </section>
 
-    <!-- LOGIN -->
+    <!-- LOGIN / REGISTER (tabbed) -->
     <section class="view" id="view-login">
       <div class="card card-narrow fade-in">
-        <h1>Team Login</h1>
-        <p class="card-sub">Find your team to view your dashboard, QR code, and registered events.</p>
-        <form id="team-login-form" autocomplete="on">
-          <label>Team Name
-            <input type="text" name="team_name" required placeholder="Enter your registered team name" autocomplete="organization" />
-          </label>
-          <button type="submit" class="btn"><i class="fas fa-search"></i> Find My Team</button>
-        </form>
-        <div class="login-divider"><span>or</span></div>
-        <details class="admin-login-details">
-          <summary>Admin / Staff Login</summary>
-          <form id="login-form" autocomplete="on">
-            <label>Username
-              <input type="text" name="username" required autocomplete="username" />
+        <div class="auth-tabs">
+          <button class="auth-tab is-active" data-auth-tab="login-panel">Login</button>
+          <button class="auth-tab" data-auth-tab="register-panel">Sign Up</button>
+        </div>
+
+        <!-- Login panel -->
+        <div class="auth-panel" id="login-panel">
+          <form id="team-login-form" autocomplete="on">
+            <label>Team Name / Username
+              <input type="text" name="team_name" required placeholder="Enter your team name or username" autocomplete="organization" />
             </label>
             <label>Password
-              <input type="password" name="password" required autocomplete="current-password" />
+              <div class="password-wrap">
+                <input type="password" name="password" required autocomplete="current-password" />
+                <button type="button" class="pw-toggle" tabindex="-1"><i class="fas fa-eye"></i></button>
+              </div>
             </label>
-            <button type="submit" class="btn">Login</button>
+            <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Login</button>
           </form>
-        </details>
-        <p class="card-foot">New team? <a href="#register">Register here</a></p>
-      </div>
-    </section>
+          <p class="card-foot"><a href="#" id="forgot-pw-link">Forgot password?</a></p>
+        </div>
 
-    <!-- REGISTER -->
-    <section class="view" id="view-register">
-      <div class="card card-narrow fade-in">
-        <h1>Register Team</h1>
-        <p class="card-sub"><span class="required-hint">* required</span></p>
-        <form id="register-form" autocomplete="off">
-          <label>Team Name *
-            <input type="text" name="team_name" required maxlength="60" />
-          </label>
-          <fieldset id="members-fieldset">
-            <legend>Members <small>(1–3)</small></legend>
-            <div class="member-row-stack" data-idx="0">
-              <div class="member-row-header">
-                <span class="member-num">Member 1</span>
-                <label class="captain-label"><input type="radio" name="captain" value="0" checked /> Captain</label>
+        <!-- Register panel -->
+        <div class="auth-panel" id="register-panel" style="display:none">
+          <p class="card-sub"><span class="required-hint">* required</span></p>
+          <form id="register-form" autocomplete="off">
+            <label>Team Name *
+              <input type="text" name="team_name" required maxlength="60" />
+            </label>
+            <label>Team Password *
+              <div class="password-wrap">
+                <input type="password" name="password" required minlength="4" placeholder="Min 4 characters" />
+                <button type="button" class="pw-toggle" tabindex="-1"><i class="fas fa-eye"></i></button>
               </div>
-              <div class="member-row-pair">
-                <input type="text" name="m0_name" placeholder="Name *" required />
-                <input type="text" name="m0_dept" placeholder="Dept. / Where from?" />
+            </label>
+            <fieldset id="members-fieldset">
+              <legend>Members <small>(1–3)</small></legend>
+              <div class="member-row-stack" data-idx="0">
+                <div class="member-row-header">
+                  <span class="member-num">Member 1</span>
+                  <label class="captain-label"><input type="radio" name="captain" value="0" checked /> Point of Contact</label>
+                </div>
+                <div class="member-row-pair">
+                  <input type="text" name="m0_name" placeholder="Name *" required />
+                  <input type="text" name="m0_dept" placeholder="Dept. / Where from?" />
+                </div>
+                <input type="email" name="m0_email" placeholder="Email *" />
               </div>
-              <input type="email" name="m0_email" placeholder="Email *" />
-            </div>
-          </fieldset>
-          <button type="button" class="btn btn-outline" id="add-member-btn"><i class="fas fa-plus"></i> Add Member</button>
-          <button type="submit" class="btn">Register</button>
-        </form>
-        <p class="card-foot">Already registered? <a href="#login">Login</a></p>
+            </fieldset>
+            <button type="button" class="btn btn-outline" id="add-member-btn"><i class="fas fa-plus"></i> Add Member</button>
+            <button type="submit" class="btn">Register</button>
+          </form>
+        </div>
       </div>
     </section>
 
@@ -234,6 +234,42 @@
       </div>
     </section>
 
+    <!-- FORGOT PASSWORD -->
+    <section class="view" id="view-forgot">
+      <div class="card card-narrow fade-in">
+        <h1>Forgot Password</h1>
+        <p class="card-sub">We'll send an OTP to your captain's email to reset your password.</p>
+        <form id="forgot-form" autocomplete="off">
+          <label>Team Name
+            <input type="text" name="team_name" required placeholder="Enter your team name" />
+          </label>
+          <button type="submit" class="btn"><i class="fas fa-paper-plane"></i> Send OTP</button>
+        </form>
+        <p class="card-foot"><a href="#login">Back to Login</a></p>
+      </div>
+    </section>
+
+    <!-- RESET PASSWORD -->
+    <section class="view" id="view-reset">
+      <div class="card card-narrow fade-in">
+        <h1>Reset Password</h1>
+        <p class="card-sub" id="reset-msg">Enter the OTP and your new password.</p>
+        <form id="reset-form" autocomplete="off">
+          <input type="hidden" name="email" id="reset-email" />
+          <label>OTP Code
+            <input type="text" name="otp" required maxlength="6" pattern="\d{6}" inputmode="numeric" class="otp-input" />
+          </label>
+          <label>New Password
+            <div class="password-wrap">
+              <input type="password" name="new_password" required minlength="4" placeholder="Min 4 characters" />
+              <button type="button" class="pw-toggle" tabindex="-1"><i class="fas fa-eye"></i></button>
+            </div>
+          </label>
+          <button type="submit" class="btn"><i class="fas fa-key"></i> Reset Password</button>
+        </form>
+      </div>
+    </section>
+
     <!-- PARTICIPANT DASHBOARD -->
     <section class="view" id="view-participant">
       <div class="fade-in">
@@ -243,28 +279,28 @@
           <span class="points-label">points</span>
         </div>
         <div class="dash-grid">
-          <div class="card qr-card">
-            <h2>Your QR Code</h2>
-            <p class="card-sub">Show this to event admins</p>
-            <div class="qr-frame" id="p-qr"></div>
-            <button type="button" class="btn btn-outline btn-sm" id="claim-qr-btn" style="margin-top:0.8rem"><i class="fas fa-qrcode"></i> Scan Points QR</button>
-            <div id="claim-qr-reader" class="qr-reader"></div>
-          </div>
           <div class="card">
-            <h2>Team Members</h2>
-            <ul class="member-list" id="p-members"></ul>
+            <h2><i class="fas fa-users"></i> Team Members</h2>
+            <ul class="member-list" id="p-members">
+              <li class="text-dim">Loading…</li>
+            </ul>
+          </div>
+          <!-- QR claim disabled — admins award points directly
+          <div class="card qr-card">
+            <h2><i class="fas fa-qrcode"></i> Scan QR</h2>
+            <p class="card-sub">Scan a Points QR from an event admin to claim points</p>
+            <button type="button" class="btn" id="claim-qr-btn"><i class="fas fa-camera"></i> Scan Points QR</button>
+            <div id="claim-qr-reader" class="qr-reader"></div>
+            <p class="claim-hint" id="claim-hint"></p>
+          </div>
+          -->
+          <div class="card card-wide">
+            <h2><i class="fas fa-calendar-check"></i> Events</h2>
+            <p class="card-sub">Browse events and register for ones that are open</p>
+            <button type="button" class="btn" id="browse-events-btn"><i class="fas fa-compass"></i> Browse All Events</button>
           </div>
           <div class="card card-wide">
-            <h2><i class="fas fa-calendar-check"></i> Registered Events</h2>
-            <p class="card-sub">Events your team has signed up for</p>
-            <div id="p-registered-events" class="event-tag-list"></div>
-            <details class="event-register-details">
-              <summary><i class="fas fa-plus"></i> Register for an event</summary>
-              <div class="event-picker" id="p-event-picker"></div>
-            </details>
-          </div>
-          <div class="card card-wide">
-            <h2>Point History</h2>
+            <h2><i class="fas fa-history"></i> Point History</h2>
             <div class="table-wrap">
               <table>
                 <thead><tr><th>Points</th><th>Reason</th><th>When</th></tr></thead>
@@ -284,6 +320,18 @@
         <span class="event-popup-tag" id="event-popup-tag"></span>
         <div class="event-popup-body" id="event-popup-body">
           <p class="text-dim">Loading details…</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVENTS BROWSE POPUP -->
+    <div class="event-overlay" id="events-browse-overlay">
+      <div class="event-popup events-browse-popup">
+        <button type="button" class="schedule-close" id="events-browse-close"><i class="fas fa-times"></i></button>
+        <h2 class="schedule-heading"><i class="fas fa-calendar-alt"></i> All Events</h2>
+        <p class="card-sub" style="text-align:center;margin-bottom:1rem">Events with registration links are open for sign-up</p>
+        <div id="events-browse-list" class="events-browse-list">
+          <p class="text-dim" style="text-align:center">Loading events…</p>
         </div>
       </div>
     </div>
@@ -315,23 +363,19 @@
                   <div class="autocomplete-list" id="a-team-suggestions"></div>
                 </div>
               </label>
+              <div id="team-history-preview" class="team-history-preview" style="display:none">
+                <h4>Point History <span id="thp-team-name"></span></h4>
+                <div id="thp-list"></div>
+              </div>
               <div id="qr-reader" class="qr-reader"></div>
               <label>Points
-                <input type="number" name="points" required min="1" />
+                <input type="number" name="points" required min="-5000" max="5000" />
               </label>
               <label>Reason
                 <input type="text" name="reason" required maxlength="120" />
               </label>
-              <div class="award-actions">
-                <button type="submit" class="btn">Award Directly</button>
-                <button type="button" class="btn btn-outline" id="gen-qr-btn"><i class="fas fa-qrcode"></i> Generate QR</button>
-              </div>
+              <button type="submit" class="btn btn-compact"><i class="fas fa-coins"></i> Award</button>
             </form>
-            <div id="points-qr-result" style="display:none;text-align:center;margin-top:1rem">
-              <p id="points-qr-label" style="margin-bottom:0.5rem;font-size:0.85rem;color:var(--text-dim)"></p>
-              <div class="qr-frame"><img id="points-qr-img" alt="Points QR" /></div>
-              <p style="font-size:0.78rem;color:var(--text-dim);margin-top:0.5rem">Show this QR to the team to scan</p>
-            </div>
           </div>
           <div class="card card-wide">
             <h2>Recent Awards</h2>
@@ -393,12 +437,18 @@
               <label>Team Name *
                 <input type="text" name="team_name" required maxlength="60" />
               </label>
+              <label>Team Password *
+                <div class="password-wrap">
+                  <input type="password" name="password" required minlength="4" placeholder="Min 4 characters" />
+                  <button type="button" class="pw-toggle" tabindex="-1"><i class="fas fa-eye"></i></button>
+                </div>
+              </label>
               <fieldset id="su-members-fieldset">
                 <legend>Members <small>(1–3)</small></legend>
                 <div class="member-row-stack" data-idx="0">
                   <div class="member-row-header">
                     <span class="member-num">Member 1</span>
-                    <label class="captain-label"><input type="radio" name="captain" value="0" checked /> Captain</label>
+                    <label class="captain-label"><input type="radio" name="captain" value="0" checked /> Point of Contact</label>
                   </div>
                   <div class="member-row-pair">
                     <input type="text" name="m0_name" placeholder="Name *" required />
@@ -439,7 +489,56 @@
     <p>Quarks Quacks 2026 · <a href="https://quarks.ug.iisc.ac.in" target="_blank" rel="noopener">quarks.ug.iisc.ac.in</a></p>
   </footer>
 
+  <button type="button" class="egg-duck" id="egg-duck" title="Click the duck!">
+    <img src="duck.svg" alt="" aria-hidden="true" />
+  </button>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script>
+  (function () {
+    var GAME_KEYS = {
+      65:1,66:1,67:1,68:1,69:1,70:1,71:1,72:1,73:1,74:1,75:1,76:1,77:1,
+      78:1,79:1,80:1,81:1,82:1,83:1,84:1,85:1,86:1,87:1,88:1,89:1,90:1
+    };
+    document.addEventListener('keyup', function (e) {
+      if (e.isTrusted && GAME_KEYS[e.which]) e.stopImmediatePropagation();
+    }, true);
+  })();
+  </script>
+  <script src="https://cdn.jsdelivr.net/gh/WeiChiaChang/Easter-egg@master/easter-eggs-collection.js"></script>
+  <script>
+  (function () {
+    var eggs = [
+      'unicorn','balloon','nyancat','pikachu','pikarun','catrun',
+      'mario','sonic','spongebob','homer','kirby','psyduck',
+      'dragon','penguin','rabbit','fox','doggy','bird',
+      'robot','ufo','ghost','swim','fly',
+      'cool','bravo','winner','airguitar','earth',
+      'hippo','piggy','snorlax','koggy','salamander',
+      'walk','onmyway','board','sensei','pokeball',
+      'haha','travel','bat','hiphop','pie','lol','ohhh',
+      'gun','money','tank','hangover','haters',
+      'britney','handsome','joker','wink','hi',
+      'kumamon','thankyou','no','piqiu','dog'
+    ];
+    function typeWord(word) {
+      word.toUpperCase().split('').forEach(function (ch, i) {
+        setTimeout(function () {
+          var code = ch.charCodeAt(0);
+          var ev = document.createEvent('Event');
+          ev.initEvent('keyup', true, true);
+          ev.which = code;
+          ev.keyCode = code;
+          document.dispatchEvent(ev);
+        }, i * 30);
+      });
+    }
+    var btn = document.getElementById('egg-duck');
+    if (btn) btn.addEventListener('click', function () {
+      typeWord(eggs[Math.floor(Math.random() * eggs.length)]);
+    });
+  })();
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

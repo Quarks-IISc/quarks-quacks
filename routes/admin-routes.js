@@ -13,33 +13,33 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'username, password, and event_scope required' });
   }
 
-  const event = db.prepare('SELECT id FROM events WHERE id = ?').get(event_scope);
+  const event = db.get('events', event_scope);
   if (!event) return res.status(400).json({ error: 'Invalid event' });
 
-  const exists = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  const exists = db.findOne('users', u => u.username === username);
   if (exists) return res.status(409).json({ error: 'Username already taken' });
 
   const hash = bcrypt.hashSync(password, 10);
-  const result = db.prepare(
-    'INSERT INTO users (username, password_hash, role, event_scope) VALUES (?, ?, ?, ?)'
-  ).run(username, hash, 'admin', event_scope);
+  const { id } = db.insert('users', { username, password_hash: hash, role: 'admin', event_scope });
 
-  res.status(201).json({ id: result.lastInsertRowid, username, role: 'admin', event_scope });
+  console.log('[ADMIN] Created:', username, '(role: admin, event:', event.name + ')');
+  res.status(201).json({ id, username, role: 'admin', event_scope });
 });
 
 router.get('/', (_req, res) => {
-  const admins = db.prepare(`
-    SELECT u.id, u.username, u.event_scope, e.name AS event_name
-    FROM users u LEFT JOIN events e ON u.event_scope = e.id
-    WHERE u.role = 'admin'
-  `).all();
+  const admins = db.find('users', u => u.role === 'admin').map(u => {
+    const event = u.event_scope ? db.get('events', u.event_scope) : null;
+    return { id: u.id, username: u.username, event_scope: u.event_scope, event_name: event ? event.name : null };
+  });
   res.json(admins);
 });
 
 router.delete('/:id', (req, res) => {
-  const user = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'admin'").get(req.params.id);
+  const id = parseInt(req.params.id);
+  const user = db.findOne('users', u => u.id === id && u.role === 'admin');
   if (!user) return res.status(404).json({ error: 'Admin not found' });
-  db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+  db.remove('users', id);
+  console.log('[ADMIN] Deleted:', user.username);
   res.json({ ok: true });
 });
 

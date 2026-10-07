@@ -3,3 +3,5 @@ quarks-points.db
 quarks-points.db-shm
 quarks-points.db-wal
 .env
+certs/
+data/

@@ -11,14 +11,28 @@ function signToken(user) {
   );
 }
 
+function signTeamToken(team) {
+  return jwt.sign(
+    { team_id: team.id, team_name: team.team_name, role: 'team' },
+    SECRET,
+    { expiresIn: '7d' }
+  );
+}
+
 function requireAuth(req, res, next) {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: 'Not authenticated' });
   try {
     const payload = jwt.verify(token, SECRET);
-    const user = db.prepare('SELECT id, username, role, event_scope FROM users WHERE id = ?').get(payload.id);
-    if (!user) return res.status(401).json({ error: 'User not found' });
-    req.user = user;
+    if (payload.team_id) {
+      const team = db.get('teams', payload.team_id);
+      if (!team) return res.status(401).json({ error: 'Team not found' });
+      req.user = { id: team.id, username: team.team_name, role: 'team', team_id: team.id };
+    } else {
+      const user = db.get('users', payload.id);
+      if (!user) return res.status(401).json({ error: 'User not found' });
+      req.user = { id: user.id, username: user.username, role: user.role, event_scope: user.event_scope };
+    }
     next();
   } catch {
     return res.status(401).json({ error: 'Invalid token' });
@@ -33,4 +47,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { signToken, requireAuth, requireRole, SECRET };
+module.exports = { signToken, signTeamToken, requireAuth, requireRole, SECRET };

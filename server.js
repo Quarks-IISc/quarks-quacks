@@ -10,9 +10,20 @@ const authRoutes = require('./routes/auth-routes');
 const adminRoutes = require('./routes/admin-routes');
 const teamRoutes = require('./routes/team-routes');
 const pointsRoutes = require('./routes/points-routes');
+const { fetchSheet, getEvents } = require('./sheet-cache');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+
+function getPort() {
+  var args = process.argv.slice(2);
+  for (var i = 0; i < args.length; i++) {
+    if ((args[i] === '-p' || args[i] === '--port') && args[i + 1]) {
+      return parseInt(args[i + 1], 10);
+    }
+  }
+  return parseInt(process.env.PORT, 10) || 3001;
+}
+const PORT = getPort();
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
@@ -26,8 +37,15 @@ app.use('/api/points', pointsRoutes);
 
 app.get('/api/events', (_req, res) => {
   const db = require('./db');
-  res.json(db.prepare('SELECT * FROM events ORDER BY name').all());
+  const events = db.all('events').sort((a, b) => a.name.localeCompare(b.name));
+  res.json(events);
 });
+
+app.get('/api/events/details', (_req, res) => {
+  res.json(getEvents());
+});
+
+fetchSheet();
 
 app.listen(PORT, '0.0.0.0', () => {
   const nets = os.networkInterfaces();
