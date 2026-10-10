@@ -26,10 +26,13 @@ router.post('/logout', (_req, res) => {
 });
 
 router.get('/me', requireAuth, (req, res) => {
-  const event = req.user.event_scope
-    ? db.get('events', req.user.event_scope)
-    : null;
-  res.json({ ...req.user, event_name: event ? event.name : null });
+  const scopes = req.user.event_scope;
+  if (Array.isArray(scopes) && scopes.length) {
+    const event_names = scopes.map(id => { const e = db.get('events', id); return e ? e.name : null; }).filter(Boolean);
+    res.json({ ...req.user, event_names });
+  } else {
+    res.json({ ...req.user, event_names: [] });
+  }
 });
 
 module.exports = router;

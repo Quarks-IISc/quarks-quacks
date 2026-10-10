@@ -33,7 +33,11 @@ router.post('/', (req, res) => {
   const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
   const { id: teamId } = db.insert('teams', {
-    team_name, password_hash: passwordHash, points: 0, created_at: db.now(), verified: 0
+    team_name, password_hash: passwordHash, points: 100, created_at: db.now(), verified: 0
+  });
+
+  db.insert('point_logs', {
+    team_id: teamId, points: 100, reason: 'Welcome to Quarks Quacks!', awarded_by: null, created_at: db.now()
   });
 
   for (const m of members) {
@@ -158,7 +162,7 @@ router.get('/search', requireAuth, requireRole('superuser', 'admin'), (req, res)
   res.json(teams);
 });
 
-router.get('/', requireAuth, requireRole('superuser', 'admin'), (_req, res) => {
+router.get('/', requireAuth, requireRole('superuser', 'admin'), (req, res) => {
   const teams = db.all('teams').sort((a, b) => b.points - a.points);
   const allMembers = db.all('team_members');
   const byTeam = {};
@@ -166,7 +170,28 @@ router.get('/', requireAuth, requireRole('superuser', 'admin'), (_req, res) => {
     if (!byTeam[m.team_id]) byTeam[m.team_id] = [];
     byTeam[m.team_id].push(m);
   }
-  res.json(teams.map(t => ({ ...t, members: byTeam[t.id] || [] })));
+  const enriched = teams.map(t => ({ ...t, members: byTeam[t.id] || [] }));
+
+  const scopes = Array.isArray(req.user.event_scope) ? req.user.event_scope : req.user.event_scope ? [req.user.event_scope] : [];
+  if (req.user.role === 'superuser' || !scopes.length) {
+    return res.json(enriched);
+  }
+
+  const regs = db.all('event_registrations');
+  const grouped = {};
+  for (const eid of scopes) {
+    const ev = db.get('events', eid);
+    const teamIds = new Set(regs.filter(r => r.event_id === eid).map(r => r.team_id));
+    grouped[eid] = {
+      event_name: ev ? ev.name : 'Event ' + eid,
+      teams: enriched.filter(t => teamIds.has(t.id))
+    };
+  }
+  res.json({ grouped });
+});
+
+router.get('/schedule', (_req, res) => {
+  res.json(SCHEDULE);
 });
 
 router.get('/:id', requireAuth, (req, res) => {
@@ -191,6 +216,68 @@ router.get('/:id', requireAuth, (req, res) => {
     verified: team.verified, created_at: team.created_at,
     members, point_logs: logs
   });
+});
+
+router.patch('/:id', requireAuth, requireRole('superuser'), (req, res) => {
+  const id = parseInt(req.params.id);
+  const team = db.get('teams', id);
+  if (!team) return res.status(404).json({ error: 'Team not found' });
+
+  const allowed = ['team_name', 'points', 'verified'];
+  const changes = {};
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) changes[key] = req.body[key];
+  }
+  if (changes.points !== undefined) changes.points = parseInt(changes.points, 10);
+  if (changes.verified !== undefined) changes.verified = changes.verified ? 1 : 0;
+
+  db.update('teams', id, changes);
+  console.log('[TEAM] Updated by superuser: "' + (changes.team_name || team.team_name) + '" changes:', JSON.stringify(changes));
+  res.json({ ok: true, ...db.get('teams', id) });
+});
+
+router.patch('/:id/members/:memberId', requireAuth, requireRole('superuser'), (req, res) => {
+  const memberId = parseInt(req.params.memberId);
+  const member = db.get('team_members', memberId);
+  if (!member) return res.status(404).json({ error: 'Member not found' });
+
+  const allowed = ['name', 'email', 'dept', 'is_captain'];
+  const changes = {};
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) changes[key] = req.body[key];
+  }
+  if (changes.is_captain !== undefined) changes.is_captain = changes.is_captain ? 1 : 0;
+
+  db.update('team_members', memberId, changes);
+  console.log('[TEAM] Member updated by superuser: member ' + memberId + ' changes:', JSON.stringify(changes));
+  res.json({ ok: true });
+});
+
+router.delete('/:id/logs/:logId', requireAuth, requireRole('superuser'), (req, res) => {
+  const logId = parseInt(req.params.logId);
+  const log = db.get('point_logs', logId);
+  if (!log) return res.status(404).json({ error: 'Log not found' });
+
+  db.remove('point_logs', logId);
+  const team = db.get('teams', log.team_id);
+  if (team) {
+    db.update('teams', team.id, { points: team.points - log.points });
+  }
+  console.log('[POINTS] Log deleted by superuser: ' + log.points + ' pts from "' + (team ? team.team_name : log.team_id) + '"');
+  res.json({ ok: true });
+});
+
+router.delete('/:id', requireAuth, requireRole('superuser'), (req, res) => {
+  const id = parseInt(req.params.id);
+  const team = db.get('teams', id);
+  if (!team) return res.status(404).json({ error: 'Team not found' });
+
+  db.removeWhere('team_members', m => m.team_id === id);
+  db.removeWhere('point_logs', l => l.team_id === id);
+  db.removeWhere('event_registrations', r => r.team_id === id);
+  db.remove('teams', id);
+  console.log('[TEAM] Deleted by superuser: "' + team.team_name + '" (id: ' + id + ')');
+  res.json({ ok: true });
 });
 
 router.get('/:id/events', (req, res) => {
@@ -241,6 +328,82 @@ router.get('/:id/qr', async (req, res) => {
   const data = JSON.stringify({ team_id: team.id, team_name: team.team_name });
   const qr = await QRCode.toDataURL(data, { width: 300, margin: 2 });
   res.json({ team_id: team.id, team_name: team.team_name, qr });
+});
+
+// ---- Schedule data (from handbook) ----
+
+const SCHEDULE = [
+  { slot: '10:30 AM – 1 PM', events: [
+    { id: 4, name: "Main Character's Canva", type: 'workshop', venue: 'G-01' },
+    { id: 1, name: 'Repartition (Debate)', type: 'competition', venue: 'G-20' },
+    { id: 3, name: 'What The Flock', type: 'competition', venue: 'G-21' },
+    { id: 6, name: 'Kala.js', type: 'workshop', venue: 'G-02' },
+    { id: 17, name: 'Pallete Royale', type: 'workshop', venue: 'F-8A' },
+    { id: 2, name: 'Duck Duck Loot', type: 'treasure_hunt', venue: 'Campus' },
+  ]},
+  { slot: '2 – 3:30 PM', events: [
+    { id: 11, name: 'Branding Workshop', type: 'workshop', venue: 'G-01' },
+    { id: 9, name: 'Pixels & Programs', type: 'competition', venue: 'G-20' },
+    { id: 7, name: 'Rangkarmi', type: 'workshop', venue: 'G-21' },
+    { id: 8, name: 'The Inner Draft', type: 'workshop', venue: 'G-02' },
+    { id: 10, name: 'The Pop Song TM', type: 'workshop', venue: 'F-8A' },
+  ]},
+  { slot: '3:30 – 5 PM', events: [
+    { id: 12, name: 'The Glam Lab', type: 'workshop', venue: 'G-01' },
+    { id: 15, name: 'Extempore', type: 'competition', venue: 'G-20' },
+    { id: 14, name: 'See. Frame. Shoot.', type: 'workshop', venue: 'G-21' },
+    { id: 16, name: 'The Quackery of the Verse', type: 'competition', venue: 'G-02' },
+    { id: 13, name: 'Rhythm Games', type: 'competition', venue: 'F-8A' },
+  ]},
+  { slot: '6 – 8 PM', events: [
+    { id: 21, name: 'Digital Canvas', type: 'competition', venue: 'G-01' },
+    { id: 5, name: 'Script to Screen', type: 'competition', venue: 'G-20' },
+    { id: 20, name: 'Artist-in-Dialogue', type: 'workshop', venue: 'G-21' },
+    { id: 19, name: 'Scicomm Workshop', type: 'workshop', venue: 'G-02' },
+    { id: 18, name: 'Heart Out Loud', type: 'competition', venue: 'F-8A' },
+  ]},
+  { slot: '8:30 – 11:30 PM', events: [
+    { id: 22, name: 'Filmon Ki Mehfil', type: 'free', venue: 'Open Air' },
+  ]},
+  { slot: 'All day', events: [
+    { id: 23, name: 'Victory Point', type: 'victory_point', venue: 'Game Room' },
+    { id: 26, name: 'PhotoBooth', type: 'free', venue: 'Booth' },
+    { id: 24, name: 'Art Exhibition', type: 'free', venue: 'Gallery' },
+    { id: 25, name: 'QQ Photography Exhibition', type: 'free', venue: 'Gallery' },
+    { id: 27, name: 'Stalls', type: 'free', venue: 'Campus' },
+  ]},
+];
+
+// ---- Team Planner ----
+
+router.get('/:id/planner', requireAuth, (req, res) => {
+  const teamId = parseInt(req.params.id);
+  if (req.user.role === 'team' && req.user.team_id !== teamId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const entries = db.find('team_planner', e => e.team_id === teamId);
+  const logs = db.find('point_logs', l => l.team_id === teamId && l.event_id);
+  res.json({ planner: entries, results: logs });
+});
+
+router.post('/:id/planner', requireAuth, (req, res) => {
+  const teamId = parseInt(req.params.id);
+  if (req.user.role === 'team' && req.user.team_id !== teamId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  const { entries } = req.body;
+  if (!Array.isArray(entries)) return res.status(400).json({ error: 'entries array required' });
+
+  db.removeWhere('team_planner', e => e.team_id === teamId);
+  for (const e of entries) {
+    if (e.slot && e.member && e.event_id) {
+      db.insert('team_planner', {
+        team_id: teamId, slot: e.slot, member: e.member,
+        event_id: parseInt(e.event_id), created_at: db.now()
+      });
+    }
+  }
+  res.json({ ok: true });
 });
 
 module.exports = router;

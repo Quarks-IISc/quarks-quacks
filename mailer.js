@@ -30,6 +30,7 @@ async function sendOtp(email, otp, teamName) {
       </div>
     `
   });
+  console.log('[MAIL] OTP sent to ' + email + ' for team "' + teamName + '"');
 }
 
 module.exports = { sendOtp };

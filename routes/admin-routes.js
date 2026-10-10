@@ -13,23 +13,27 @@ router.post('/', (req, res) => {
     return res.status(400).json({ error: 'username, password, and event_scope required' });
   }
 
-  const event = db.get('events', event_scope);
-  if (!event) return res.status(400).json({ error: 'Invalid event' });
+  const scopes = Array.isArray(event_scope) ? event_scope : [event_scope];
+  for (const id of scopes) {
+    if (!db.get('events', id)) return res.status(400).json({ error: 'Invalid event id: ' + id });
+  }
 
   const exists = db.findOne('users', u => u.username === username);
   if (exists) return res.status(409).json({ error: 'Username already taken' });
 
   const hash = bcrypt.hashSync(password, 10);
-  const { id } = db.insert('users', { username, password_hash: hash, role: 'admin', event_scope });
+  const { id } = db.insert('users', { username, password_hash: hash, role: 'admin', event_scope: scopes });
 
-  console.log('[ADMIN] Created:', username, '(role: admin, event:', event.name + ')');
-  res.status(201).json({ id, username, role: 'admin', event_scope });
+  const names = scopes.map(s => db.get('events', s).name).join(', ');
+  console.log('[ADMIN] Created:', username, '(role: admin, events:', names + ')');
+  res.status(201).json({ id, username, role: 'admin', event_scope: scopes });
 });
 
 router.get('/', (_req, res) => {
   const admins = db.find('users', u => u.role === 'admin').map(u => {
-    const event = u.event_scope ? db.get('events', u.event_scope) : null;
-    return { id: u.id, username: u.username, event_scope: u.event_scope, event_name: event ? event.name : null };
+    const scopes = Array.isArray(u.event_scope) ? u.event_scope : u.event_scope ? [u.event_scope] : [];
+    const event_names = scopes.map(id => { const e = db.get('events', id); return e ? e.name : null; }).filter(Boolean);
+    return { id: u.id, username: u.username, event_scope: scopes, event_names };
   });
   res.json(admins);
 });

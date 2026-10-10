@@ -2,7 +2,7 @@
   var user = null;
   var teamData = null;
   var lbTimer = null;
-  var qrScanner = null;
+
   var sheetEvents = null;
 
   // Restore team session from localStorage
@@ -240,10 +240,6 @@
       if (match.venue) html += '<p><i class="fas fa-map-marker-alt" style="color:var(--coral)"></i> ' + esc(match.venue) + '</p>';
       if (match.time) html += '<p><i class="fas fa-clock" style="color:var(--secondary)"></i> ' + esc(match.time) + '</p>';
       if (match.club) html += '<p><i class="fas fa-users" style="color:var(--info)"></i> ' + esc(match.club) + '</p>';
-      if (match.regLink) {
-        html += '<a href="' + esc(match.regLink) + '" target="_blank" rel="noopener" class="btn" style="margin-top:1rem;width:auto;display:inline-flex">' +
-          '<i class="fas fa-external-link-alt"></i> Register for this event</a>';
-      }
       body.innerHTML = html || '<p class="text-dim">No additional details available.</p>';
     } else {
       body.innerHTML = '<p class="text-dim">No details found for this event in the schedule sheet.</p>';
@@ -408,7 +404,7 @@
         this.reset();
         go('dashboard');
       } catch (adminErr) {
-        toast(teamErr.message);
+        toast(adminErr.message || teamErr.message);
       }
     }
   });
@@ -575,11 +571,23 @@
       document.getElementById('p-members').innerHTML =
         membersHtml || '<li class="text-dim">No members found</li>';
 
+      var qrEl = document.getElementById('p-qr-code');
+      qrEl.innerHTML = '';
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(qrEl, {
+          text: JSON.stringify({ team_id: teamData.id, team_name: data.team_name }),
+          width: 200, height: 200,
+          colorDark: '#000000', colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      }
+
       var hist = await api('GET', '/api/points/' + teamData.id);
       document.getElementById('p-history').innerHTML = hist.map(function (h) {
         return '<tr><td>+' + h.points + '</td><td>' + esc(h.reason) + '</td><td>' + timeAgo(h.created_at) + '</td></tr>';
       }).join('') || '<tr><td colspan="3">No points yet</td></tr>';
 
+      loadPlanner();
     } catch (err) {
       if (err.message === 'Not authenticated') {
         clearTeam();
@@ -590,6 +598,92 @@
     }
   }
 
+
+  // ---- Team Planner ----
+
+  var plannerSchedule = null;
+
+  async function loadPlanner() {
+    if (!teamData || !teamData.id) return;
+    try {
+      if (!plannerSchedule) plannerSchedule = await api('GET', '/api/teams/schedule');
+      var data = await api('GET', '/api/teams/' + teamData.id + '/planner');
+      var teamInfo = await api('GET', '/api/teams/' + teamData.id);
+      var members = (teamInfo.members || []).map(function (m) { return m.name; });
+      if (!members.length) members = ['Member 1'];
+
+      var saved = {};
+      (data.planner || []).forEach(function (e) {
+        saved[e.slot + '|' + e.member] = e.event_id;
+      });
+
+      var resultsByMember = {};
+      (data.results || []).forEach(function (r) {
+        if (r.event_id) {
+          var key = r.event_id;
+          if (!resultsByMember[key]) resultsByMember[key] = { points: 0, placement: null };
+          resultsByMember[key].points += r.points;
+          if (r.placement) resultsByMember[key].placement = r.placement;
+        }
+      });
+
+      var allDayEvents = [];
+      var timedSlots = [];
+      plannerSchedule.forEach(function (slot) {
+        if (slot.slot === 'All day') { allDayEvents = slot.events; }
+        else { timedSlots.push(slot); }
+      });
+
+      var colCount = Math.min(Math.max(members.length, 1), 3);
+      var displayMembers = members.slice(0, colCount);
+
+      var html = '<table class="planner-table"><thead><tr><th>Time Slot</th>';
+      displayMembers.forEach(function (m) { html += '<th>' + esc(m) + '</th>'; });
+      html += '</tr></thead><tbody>';
+
+      timedSlots.forEach(function (slot) {
+        var slotEvents = slot.events.concat(allDayEvents);
+        html += '<tr><td class="planner-slot">' + esc(slot.slot) + '</td>';
+        displayMembers.forEach(function (m) {
+          var key = slot.slot + '|' + m;
+          var selVal = saved[key] || '';
+          html += '<td><select class="planner-select" data-slot="' + esc(slot.slot) + '" data-member="' + esc(m) + '">';
+          html += '<option value="">—</option>';
+          slotEvents.forEach(function (ev) {
+            var sel = selVal == ev.id ? ' selected' : '';
+            var badge = ev.type === 'workshop' ? ' [W]' : ev.type === 'competition' ? ' [C]' : ev.type === 'treasure_hunt' ? ' [TH]' : ev.type === 'victory_point' ? ' [VP]' : '';
+            html += '<option value="' + ev.id + '"' + sel + '>' + esc(ev.name) + badge + '</option>';
+          });
+          html += '</select>';
+          var selId = selVal;
+          if (selId && resultsByMember[selId]) {
+            var r = resultsByMember[selId];
+            var label = r.placement ? ' (' + r.placement + ')' : '';
+            html += '<div class="planner-cell-pts">' + (r.points > 0 ? '+' : '') + r.points + label + '</div>';
+          }
+          html += '</td>';
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('planner-grid').innerHTML = html;
+    } catch (e) {}
+  }
+
+  document.getElementById('save-planner').addEventListener('click', async function () {
+    var selects = document.querySelectorAll('.planner-select');
+    var entries = [];
+    selects.forEach(function (sel) {
+      if (sel.value) {
+        entries.push({ slot: sel.dataset.slot, member: sel.dataset.member, event_id: parseInt(sel.value) });
+      }
+    });
+    try {
+      await api('POST', '/api/teams/' + teamData.id + '/planner', { entries: entries });
+      toast('Plan saved!', true);
+    } catch (e) { toast(e.message); }
+  });
 
   // ---- Browse Events Popup ----
 
@@ -625,10 +719,6 @@
       var theme = detectTheme(ev.name);
       var meta = [ev.time, ev.venue, ev.club].filter(Boolean).join(' · ');
       var regBtn = '';
-      if (ev.regLink) {
-        regBtn = '<a href="' + esc(ev.regLink) + '" target="_blank" rel="noopener" class="events-browse-reg" onclick="event.stopPropagation()">' +
-          '<i class="fas fa-external-link-alt"></i> Register</a>';
-      }
       return '<div class="events-browse-item" data-event-name="' + esc(ev.name) + '">' +
         '<span class="events-browse-dot" style="background:' + theme.color + '"></span>' +
         '<div class="events-browse-info">' +
@@ -659,7 +749,7 @@
     var isSuperuser = user.role === 'superuser';
     document.getElementById('a-scope').textContent = isSuperuser
       ? 'Superuser — ' + user.username
-      : user.event_name ? 'Managing: ' + user.event_name : 'All events';
+      : user.event_names && user.event_names.length ? 'Managing: ' + user.event_names.join(', ') : 'All events';
 
     document.querySelectorAll('.su-only').forEach(function (el) {
       el.style.display = isSuperuser ? '' : 'none';
@@ -753,7 +843,88 @@
     }
   });
 
-  // ---- Award Form ----
+  // ---- Award Form (with event & placement) ----
+
+  var POINTS_MAP = {
+    'attended': 300,
+    'participation': 50,
+    '1st': null, '2nd': null, '3rd': null,
+    'side_quest': 100,
+    'ticket_100': 100,
+    'ticket_300': 300,
+    'custom': null
+  };
+  var COMPETITION_POINTS = { '1st': 1200, '2nd': 900, '3rd': 600 };
+  var HUNT_POINTS = { '1st': 1500, '2nd': 1200, '3rd': 800 };
+
+  var aEventSelect = document.getElementById('a-event-select');
+  var aPlacement = document.getElementById('a-placement-select');
+  var aPointsInput = document.getElementById('a-points-input');
+  var aReasonInput = document.getElementById('a-reason-input');
+
+  var REASON_MAP = {
+    'attended': 'Attended workshop',
+    'participation': 'Participation',
+    '1st': '1st Place',
+    '2nd': '2nd Place',
+    '3rd': '3rd Place',
+    'side_quest': 'Side Quest completion',
+    'ticket_100': '100 Point Ticket',
+    'ticket_300': '300 Point Ticket'
+  };
+
+  (async function loadAwardEvents() {
+    try {
+      var schedule = await api('GET', '/api/teams/schedule');
+      var seen = {};
+      schedule.forEach(function (s) {
+        s.events.forEach(function (ev) {
+          if (!seen[ev.id]) {
+            seen[ev.id] = true;
+            var opt = document.createElement('option');
+            opt.value = ev.id;
+            opt.textContent = ev.name;
+            opt.dataset.type = ev.type;
+            aEventSelect.appendChild(opt);
+          }
+        });
+      });
+    } catch (e) {}
+  })();
+
+  aPlacement.addEventListener('change', function () {
+    var pl = this.value;
+    var evName = aEventSelect.selectedOptions[0] ? aEventSelect.selectedOptions[0].textContent : '';
+    if (!pl || pl === 'custom') {
+      aPointsInput.value = ''; aPointsInput.readOnly = false;
+      aReasonInput.value = ''; aReasonInput.readOnly = false;
+      return;
+    }
+    var fixed = POINTS_MAP[pl];
+    if (fixed !== null && fixed !== undefined) {
+      aPointsInput.value = fixed; aPointsInput.readOnly = true;
+    } else {
+      var selOpt = aEventSelect.selectedOptions[0];
+      var evType = selOpt ? selOpt.dataset.type : '';
+      if (evType === 'treasure_hunt') {
+        aPointsInput.value = HUNT_POINTS[pl] || ''; aPointsInput.readOnly = true;
+      } else {
+        aPointsInput.value = COMPETITION_POINTS[pl] || ''; aPointsInput.readOnly = true;
+      }
+    }
+    var reason = REASON_MAP[pl] || '';
+    if (reason && evName && evName !== '— Custom points —') reason = reason + ' — ' + evName;
+    aReasonInput.value = reason;
+    aReasonInput.readOnly = !!reason;
+  });
+
+  aEventSelect.addEventListener('change', function () {
+    var selOpt = aEventSelect.selectedOptions[0];
+    var evType = selOpt ? selOpt.dataset.type : '';
+    var huntOpts = aPlacement.querySelectorAll('.hunt-only');
+    huntOpts.forEach(function (o) { o.style.display = evType === 'treasure_hunt' ? '' : 'none'; });
+    aPlacement.dispatchEvent(new Event('change'));
+  });
 
   function getAwardData() {
     var form = document.getElementById('award-form');
@@ -763,7 +934,11 @@
     var reason = fd.get('reason');
     if (!tid) { toast('Select a team first'); return null; }
     if (!pts || pts === 0 || pts < -5000 || pts > 5000) { toast('Enter points between -5000 and 5000'); return null; }
-    return { team_id: tid, amount: pts, reason: reason, form: form };
+    return {
+      team_id: tid, amount: pts, reason: reason, form: form,
+      event_id: fd.get('event_id') || undefined,
+      placement: fd.get('placement') || undefined
+    };
   }
 
   document.getElementById('award-form').addEventListener('submit', async function (e) {
@@ -771,7 +946,10 @@
     var d = getAwardData();
     if (!d) return;
     try {
-      await api('POST', '/api/points', { team_id: d.team_id, amount: d.amount, reason: d.reason });
+      await api('POST', '/api/points', {
+        team_id: d.team_id, amount: d.amount, reason: d.reason,
+        event_id: d.event_id, placement: d.placement
+      });
       toast('Points awarded!', true);
       d.form.reset();
       document.getElementById('team-history-preview').style.display = 'none';
@@ -782,55 +960,40 @@
   });
 
 
-  /* ---- QR Scanner (disabled — admins award points directly) ----
+  // ---- QR Scanner (opens popup on HTTPS static site) ----
 
-  function parseQrData(decoded) {
-    try { return JSON.parse(decoded); } catch (e) {}
-    var num = parseInt(decoded);
-    return num ? { team_id: num } : null;
-  }
+  var QR_SCANNER_URL = 'https://quarks.ug.iisc.ac.in/qr-scanner';
 
-  function startQrScanner(readerId, onScan) {
-    var reader = document.getElementById(readerId);
-    reader.classList.add('is-active');
-    if (qrScanner) qrScanner.stop().catch(function () {});
-    qrScanner = new Html5Qrcode(readerId);
-    qrScanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 250, height: 250 } },
-      function (decoded) {
-        var data = parseQrData(decoded);
-        if (data) { stopQrScanner(); onScan(data); }
-      }
-    ).catch(function (err) {
-      stopQrScanner();
-    });
-  }
-
-  function stopQrScanner() {
-    if (qrScanner) { qrScanner.stop().catch(function () {}); qrScanner = null; }
-    document.querySelectorAll('.qr-reader').forEach(function (el) { el.classList.remove('is-active'); });
-  }
-
-  async function handleClaimQr(data) {
-    if (data.type === 'points' && data.token) {
-      try {
-        var result = await api('POST', '/api/points/claim', { token: data.token, team_id: teamData.id });
-        toast('+' + result.awarded + ' points! ' + (result.reason || ''), true);
-        showParticipant();
-      } catch (err) {
-        toast(err.message);
-      }
-    } else {
-      toast('Not a valid points QR');
-    }
-  }
-
-  document.getElementById('claim-qr-btn').addEventListener('click', function () {
-    startQrScanner('claim-qr-reader', handleClaimQr);
+  document.getElementById('open-qr-scan').addEventListener('click', function () {
+    window.open(QR_SCANNER_URL, 'qr-scanner', 'width=420,height=520,menubar=no,toolbar=no');
   });
 
-  ---- end QR Scanner ---- */
+  window.addEventListener('message', function (ev) {
+    if (!ev.data || ev.data.type !== 'qr-scan') return;
+    var decoded = ev.data.data;
+    if (!decoded) return;
+
+    var teamId = null;
+    try {
+      var obj = JSON.parse(decoded);
+      teamId = obj.team_id || obj.id;
+    } catch (e) {
+      teamId = parseInt(decoded);
+    }
+    if (!teamId || isNaN(teamId)) {
+      toast('QR not recognized: ' + decoded);
+      return;
+    }
+
+    teamIdInput.value = teamId;
+    api('GET', '/api/teams/' + teamId).then(function (t) {
+      teamSearchInput.value = t.team_name;
+      toast('Team: ' + t.team_name, true);
+      loadTeamHistoryPreview(teamId, t.team_name);
+    }).catch(function () {
+      toast('Team #' + teamId + ' not found');
+    });
+  });
 
 
   // ---- Superuser helpers ----
@@ -848,7 +1011,7 @@
     try {
       var admins = await api('GET', '/api/admins');
       document.getElementById('su-admin-list').innerHTML = admins.map(function (a) {
-        return '<tr><td>' + esc(a.username) + '</td><td>' + esc(a.event_name || '—') + '</td>' +
+        return '<tr><td>' + esc(a.username) + '</td><td>' + (a.event_names && a.event_names.length ? a.event_names.map(esc).join(', ') : '—') + '</td>' +
           '<td><button class="btn-danger" data-del-admin="' + a.id + '">Delete</button></td></tr>';
       }).join('') || '<tr><td colspan="3">No admins</td></tr>';
     } catch (e) {}
@@ -871,7 +1034,7 @@
       await api('POST', '/api/admins', {
         username: fd.get('username'),
         password: fd.get('password'),
-        event_scope: parseInt(fd.get('event_id'))
+        event_scope: fd.getAll('event_id').map(function (v) { return parseInt(v); })
       });
       toast('Admin created!', true);
       this.reset();
@@ -879,18 +1042,170 @@
     } catch (err) { toast(err.message); }
   });
 
+  function renderTeamRows(teams, isSu) {
+    return teams.map(function (t) {
+      var members = (t.members || []).map(function (m) { return esc(m.name); }).join(', ');
+      return '<tr' + (isSu ? ' class="clickable-row" data-team-id="' + t.id + '"' : '') + '><td>' + t.id + '</td><td>' + esc(t.team_name) + '</td>' +
+        '<td>' + t.points + '</td>' +
+        '<td>' + (t.verified ? '<i class="fas fa-check" style="color:var(--success)"></i>' : '<i class="fas fa-times" style="color:var(--danger)"></i>') + '</td>' +
+        '<td>' + members + '</td>' +
+        (isSu ? '<td><button class="btn btn-compact btn-sm" data-team-id="' + t.id + '"><i class="fas fa-eye"></i> Details</button></td>' : '') + '</tr>';
+    }).join('') || '<tr><td colspan="5">No teams</td></tr>';
+  }
+
+  function buildTeamTable(title, teams, isSu) {
+    return '<h3 style="margin:1.2rem 0 0.5rem;font-family:var(--font-pixel);color:var(--accent)">' + esc(title) + '</h3>' +
+      '<div class="table-wrap"><table>' +
+      '<thead><tr><th>#</th><th>Team</th><th>Points</th><th>Verified</th><th>Members</th>' + (isSu ? '<th></th>' : '') + '</tr></thead>' +
+      '<tbody>' + renderTeamRows(teams, isSu) + '</tbody></table></div>';
+  }
+
   async function loadAllTeams() {
     try {
-      var teams = await api('GET', '/api/teams');
-      document.getElementById('su-team-list').innerHTML = teams.map(function (t) {
-        var members = (t.members || []).map(function (m) { return esc(m.name); }).join(', ');
-        return '<tr><td>' + t.id + '</td><td>' + esc(t.team_name) + '</td>' +
-          '<td>' + t.points + '</td>' +
-          '<td>' + (t.verified ? '<i class="fas fa-check" style="color:var(--success)"></i>' : '<i class="fas fa-times" style="color:var(--danger)"></i>') + '</td>' +
-          '<td>' + members + '</td></tr>';
-      }).join('') || '<tr><td colspan="5">No teams</td></tr>';
+      var data = await api('GET', '/api/teams');
+      var isSu = user && user.role === 'superuser';
+      var container = document.getElementById('admin-teams-container');
+
+      if (data.grouped) {
+        var html = '';
+        var keys = Object.keys(data.grouped);
+        for (var i = 0; i < keys.length; i++) {
+          var g = data.grouped[keys[i]];
+          html += buildTeamTable(g.event_name, g.teams, isSu);
+        }
+        container.innerHTML = html || '<p>No participating teams yet.</p>';
+      } else {
+        container.innerHTML = buildTeamTable('All Teams', data, isSu);
+      }
     } catch (e) {}
   }
+
+  // ---- Team Detail Overlay (superuser) ----
+
+  document.getElementById('admin-teams-container').addEventListener('click', function (e) {
+    var row = e.target.closest('[data-team-id]');
+    if (!row) return;
+    openTeamDetail(parseInt(row.dataset.teamId));
+  });
+
+  document.getElementById('team-detail-close').addEventListener('click', function () {
+    document.getElementById('team-detail-overlay').style.display = 'none';
+  });
+
+  var currentDetailTeamId = null;
+
+  async function openTeamDetail(teamId) {
+    currentDetailTeamId = teamId;
+    var overlay = document.getElementById('team-detail-overlay');
+    overlay.style.display = 'flex';
+
+    try {
+      var t = await api('GET', '/api/teams/' + teamId);
+      document.getElementById('td-title').textContent = t.team_name;
+
+      // Info fields (editable)
+      document.getElementById('td-info').innerHTML =
+        '<div class="td-field">' +
+          '<label>Team Name</label>' +
+          '<input type="text" id="td-name" value="' + esc(t.team_name) + '" />' +
+        '</div>' +
+        '<div class="td-field">' +
+          '<label>Points</label>' +
+          '<input type="number" id="td-points" value="' + t.points + '" min="-5000" max="99999" />' +
+        '</div>' +
+        '<div class="td-field">' +
+          '<label>Verified</label>' +
+          '<select id="td-verified"><option value="1"' + (t.verified ? ' selected' : '') + '>Yes</option><option value="0"' + (!t.verified ? ' selected' : '') + '>No</option></select>' +
+        '</div>' +
+        '<div class="td-field">' +
+          '<label>Created</label>' +
+          '<span class="text-dim">' + (t.created_at || '—') + '</span>' +
+        '</div>' +
+        '<button class="btn btn-compact" id="td-save-info"><i class="fas fa-save"></i> Save</button>';
+
+      document.getElementById('td-save-info').addEventListener('click', async function () {
+        try {
+          await api('PATCH', '/api/teams/' + teamId, {
+            team_name: document.getElementById('td-name').value,
+            points: parseInt(document.getElementById('td-points').value),
+            verified: parseInt(document.getElementById('td-verified').value)
+          });
+          toast('Team updated!', true);
+          loadAllTeams();
+          document.getElementById('td-title').textContent = document.getElementById('td-name').value;
+        } catch (err) { toast(err.message); }
+      });
+
+      // Members (editable)
+      document.getElementById('td-members').innerHTML = (t.members || []).map(function (m) {
+        return '<div class="td-member" data-member-id="' + m.id + '">' +
+          '<div class="td-member-fields">' +
+            '<input type="text" value="' + esc(m.name) + '" data-field="name" placeholder="Name" />' +
+            '<input type="text" value="' + esc(m.email || '') + '" data-field="email" placeholder="Email" />' +
+            '<input type="text" value="' + esc(m.dept || '') + '" data-field="dept" placeholder="Dept" />' +
+            '<label class="td-poc-label"><input type="checkbox" data-field="is_captain"' + (m.is_captain ? ' checked' : '') + ' /> PoC</label>' +
+          '</div>' +
+          '<button class="btn btn-compact td-member-save"><i class="fas fa-save"></i></button>' +
+        '</div>';
+      }).join('') || '<p class="text-dim">No members</p>';
+
+      document.getElementById('td-members').querySelectorAll('.td-member-save').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+          var wrap = this.closest('[data-member-id]');
+          var mid = wrap.dataset.memberId;
+          var data = {};
+          wrap.querySelectorAll('[data-field]').forEach(function (inp) {
+            if (inp.type === 'checkbox') data[inp.dataset.field] = inp.checked ? 1 : 0;
+            else data[inp.dataset.field] = inp.value;
+          });
+          try {
+            await api('PATCH', '/api/teams/' + teamId + '/members/' + mid, data);
+            toast('Member updated!', true);
+            loadAllTeams();
+          } catch (err) { toast(err.message); }
+        });
+      });
+
+      // Point logs
+      renderDetailLogs(t.point_logs || []);
+
+    } catch (err) {
+      toast(err.message);
+      overlay.style.display = 'none';
+    }
+  }
+
+  function renderDetailLogs(logs) {
+    document.getElementById('td-logs').innerHTML = logs.map(function (l) {
+      return '<tr><td>' + (l.points > 0 ? '+' : '') + l.points + '</td>' +
+        '<td>' + esc(l.reason || '—') + '</td>' +
+        '<td>' + esc(l.awarded_by_name || 'system') + '</td>' +
+        '<td>' + timeAgo(l.created_at) + '</td>' +
+        '<td><button class="btn-icon td-del-log" data-log-id="' + l.id + '" title="Delete"><i class="fas fa-trash"></i></button></td></tr>';
+    }).join('') || '<tr><td colspan="5" class="text-dim">No history</td></tr>';
+
+    document.getElementById('td-logs').querySelectorAll('.td-del-log').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        if (!confirm('Delete this point log entry? Team points will be adjusted.')) return;
+        try {
+          await api('DELETE', '/api/teams/' + currentDetailTeamId + '/logs/' + this.dataset.logId);
+          toast('Log deleted', true);
+          openTeamDetail(currentDetailTeamId);
+          loadAllTeams();
+        } catch (err) { toast(err.message); }
+      });
+    });
+  }
+
+  document.getElementById('td-delete-team').addEventListener('click', async function () {
+    if (!confirm('DELETE this entire team? This cannot be undone.')) return;
+    try {
+      await api('DELETE', '/api/teams/' + currentDetailTeamId);
+      toast('Team deleted', true);
+      document.getElementById('team-detail-overlay').style.display = 'none';
+      loadAllTeams();
+    } catch (err) { toast(err.message); }
+  });
 
   // ---- Standalone Leaderboard ----
 
@@ -919,12 +1234,19 @@
 
   function timeAgo(ts) {
     if (!ts) return '—';
-    var d = new Date(ts);
-    var diff = Math.floor((Date.now() - d.getTime()) / 1000);
-    if (diff < 60) return 'just now';
-    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-    return d.toLocaleDateString();
+    var d = new Date(ts + (ts.indexOf('+') === -1 && ts.indexOf('Z') === -1 ? 'Z' : ''));
+    var ist = new Date(d.getTime() + 330 * 60000);
+    var h = ist.getUTCHours();
+    var m = ist.getUTCMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    var time = h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+    var today = new Date(Date.now() + 330 * 60000);
+    if (ist.getUTCFullYear() === today.getUTCFullYear() && ist.getUTCMonth() === today.getUTCMonth() && ist.getUTCDate() === today.getUTCDate()) {
+      return time;
+    }
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return ist.getUTCDate() + ' ' + months[ist.getUTCMonth()] + ', ' + time;
   }
 
   // ---- Countdown ----

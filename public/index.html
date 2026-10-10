@@ -69,6 +69,15 @@
           </a>
         </div>
 
+        <!-- Handbook -->
+        <div class="handbook-section">
+          <h3 class="handbook-heading">Rules &amp; Handbook</h3>
+          <a class="handbook-card" href="handbook.pdf" target="_blank" rel="noopener noreferrer">
+            <img class="handbook-thumb" src="handbook-thumb.webp" alt="Quarks Quacks Handbook" loading="lazy" />
+            <span class="handbook-dl"><i class="fas fa-download"></i> Download PDF</span>
+          </a>
+        </div>
+
         <!-- Schedule popup -->
         <div class="schedule-overlay" id="schedule-overlay">
           <div class="schedule-popup">
@@ -278,35 +287,43 @@
           <div class="points-big" id="p-points">0</div>
           <span class="points-label">points</span>
         </div>
-        <div class="dash-grid">
+        <div class="dash-grid dash-grid-3">
           <div class="card">
             <h2><i class="fas fa-users"></i> Team Members</h2>
             <ul class="member-list" id="p-members">
               <li class="text-dim">Loading…</li>
             </ul>
           </div>
-          <!-- QR claim disabled — admins award points directly
-          <div class="card qr-card">
-            <h2><i class="fas fa-qrcode"></i> Scan QR</h2>
-            <p class="card-sub">Scan a Points QR from an event admin to claim points</p>
-            <button type="button" class="btn" id="claim-qr-btn"><i class="fas fa-camera"></i> Scan Points QR</button>
-            <div id="claim-qr-reader" class="qr-reader"></div>
-            <p class="claim-hint" id="claim-hint"></p>
-          </div>
-          -->
-          <div class="card card-wide">
+          <div class="card">
             <h2><i class="fas fa-calendar-check"></i> Events</h2>
-            <p class="card-sub">Browse events and register for ones that are open</p>
+            <p class="card-sub">Browse all events for the day</p>
             <button type="button" class="btn" id="browse-events-btn"><i class="fas fa-compass"></i> Browse All Events</button>
           </div>
-          <div class="card card-wide">
-            <h2><i class="fas fa-history"></i> Point History</h2>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>Points</th><th>Reason</th><th>When</th></tr></thead>
-                <tbody id="p-history"></tbody>
-              </table>
-            </div>
+          <div class="card" style="text-align:center">
+            <h2><i class="fas fa-qrcode"></i> Your Team QR</h2>
+            <p class="card-sub">Show this to an admin to get points</p>
+            <div id="p-qr-code" style="margin:0.8rem auto;display:inline-block;background:#fff;padding:12px;border-radius:8px"></div>
+          </div>
+          <div class="card">
+            <h2><i class="fas fa-search-location"></i> Treasure Hunt</h2>
+            <p class="card-sub">Duck Duck Loot — solve clues and find QR codes across campus</p>
+            <a href="/treasure-hunt/dashboard" class="btn" style="margin-top:0.5rem"><i class="fas fa-play"></i> Enter the Hunt</a>
+          </div>
+        </div>
+        <div class="card card-wide">
+          <h2><i class="fas fa-map"></i> Team Planner</h2>
+          <p class="card-sub">Plan who goes where. Aim for 3 different events per slot!</p>
+          <p class="planner-legend"><span>[W] Workshop</span> <span>[C] Competition</span> <span>[TH] Treasure Hunt</span> <span>[VP] Victory Point</span></p>
+          <div id="planner-grid" class="planner-grid"></div>
+          <button type="button" class="btn btn-compact" id="save-planner" style="margin-top:0.8rem"><i class="fas fa-save"></i> Save Plan</button>
+        </div>
+        <div class="card card-wide">
+          <h2><i class="fas fa-history"></i> Point History</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Points</th><th>Reason</th><th>When</th></tr></thead>
+              <tbody id="p-history"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -329,7 +346,7 @@
       <div class="event-popup events-browse-popup">
         <button type="button" class="schedule-close" id="events-browse-close"><i class="fas fa-times"></i></button>
         <h2 class="schedule-heading"><i class="fas fa-calendar-alt"></i> All Events</h2>
-        <p class="card-sub" style="text-align:center;margin-bottom:1rem">Events with registration links are open for sign-up</p>
+        <p class="card-sub" style="text-align:center;margin-bottom:1rem">Browse all events for Quarks Quacks</p>
         <div id="events-browse-list" class="events-browse-list">
           <p class="text-dim" style="text-align:center">Loading events…</p>
         </div>
@@ -367,12 +384,31 @@
                 <h4>Point History <span id="thp-team-name"></span></h4>
                 <div id="thp-list"></div>
               </div>
-              <div id="qr-reader" class="qr-reader"></div>
+              <button type="button" class="btn btn-compact" id="open-qr-scan" style="margin:0.5rem 0"><i class="fas fa-qrcode"></i> Scan QR</button>
+              <label>Event
+                <select name="event_id" id="a-event-select">
+                  <option value="">— Custom points —</option>
+                </select>
+              </label>
+              <label>Placement
+                <select name="placement" id="a-placement-select">
+                  <option value="">N/A</option>
+                  <option value="attended">Attended (Workshop +300)</option>
+                  <option value="participation">Participation (+50)</option>
+                  <option value="1st">1st Place</option>
+                  <option value="2nd">2nd Place</option>
+                  <option value="3rd">3rd Place</option>
+                  <option value="side_quest">Side Quest (+100)</option>
+                  <option value="ticket_100" class="hunt-only" style="display:none">100 Point Ticket (+100)</option>
+                  <option value="ticket_300" class="hunt-only" style="display:none">300 Point Ticket (+300)</option>
+                  <option value="custom">Custom amount</option>
+                </select>
+              </label>
               <label>Points
-                <input type="number" name="points" required min="-5000" max="5000" />
+                <input type="number" name="points" id="a-points-input" required min="-5000" max="5000" />
               </label>
               <label>Reason
-                <input type="text" name="reason" required maxlength="120" />
+                <input type="text" name="reason" id="a-reason-input" required maxlength="120" />
               </label>
               <button type="submit" class="btn btn-compact"><i class="fas fa-coins"></i> Award</button>
             </form>
@@ -391,13 +427,8 @@
         <!-- Teams tab -->
         <div class="su-panel" id="admin-teams" style="display:none">
           <div class="card card-wide">
-            <h2>All Teams</h2>
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>#</th><th>Team</th><th>Points</th><th>Verified</th><th>Members</th></tr></thead>
-                <tbody id="su-team-list"></tbody>
-              </table>
-            </div>
+            <h2>Teams</h2>
+            <div id="admin-teams-container"></div>
           </div>
         </div>
 
@@ -412,8 +443,8 @@
               <label>Password
                 <input type="password" name="password" required minlength="4" />
               </label>
-              <label>Event
-                <select name="event_id" id="su-event-select" required></select>
+              <label>Events
+                <select name="event_id" id="su-event-select" required multiple size="5"></select>
               </label>
               <button type="submit" class="btn">Create Admin</button>
             </form>
@@ -422,7 +453,7 @@
             <h2>Admins</h2>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Username</th><th>Event</th><th></th></tr></thead>
+                <thead><tr><th>Username</th><th>Events</th><th></th></tr></thead>
                 <tbody id="su-admin-list"></tbody>
               </table>
             </div>
@@ -483,6 +514,38 @@
       </div>
     </section>
 
+  <!-- Team Detail Overlay (superuser only) -->
+  <div class="overlay" id="team-detail-overlay" style="display:none">
+    <div class="overlay-content overlay-wide">
+      <button class="overlay-close" id="team-detail-close">&times;</button>
+      <h2 id="td-title">Team Details</h2>
+
+      <div class="td-section">
+        <h3>Team Info</h3>
+        <div class="td-fields" id="td-info"></div>
+      </div>
+
+      <div class="td-section">
+        <h3>Members</h3>
+        <div id="td-members"></div>
+      </div>
+
+      <div class="td-section">
+        <h3>Point History</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Points</th><th>Reason</th><th>By</th><th>When</th><th></th></tr></thead>
+            <tbody id="td-logs"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="td-section td-danger">
+        <button class="btn btn-danger btn-compact" id="td-delete-team"><i class="fas fa-trash"></i> Delete Team</button>
+      </div>
+    </div>
+  </div>
+
   </main>
 
   <footer class="site-footer">
@@ -493,7 +556,7 @@
     <img src="duck.svg" alt="" aria-hidden="true" />
   </button>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
   (function () {
     var GAME_KEYS = {

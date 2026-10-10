@@ -3,6 +3,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const path = require('path');
 const os = require('os');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 require('./db');
 
@@ -44,6 +45,28 @@ app.get('/api/events', (_req, res) => {
 app.get('/api/events/details', (_req, res) => {
   res.json(getEvents());
 });
+
+const HUNT_PORT = process.env.HUNT_PORT || 8000;
+const jwt = require('jsonwebtoken');
+const { SECRET } = require('./auth');
+
+app.use('/treasure-hunt', (req, _res, next) => {
+  const token = req.cookies.token;
+  if (token) {
+    try {
+      const payload = jwt.verify(token, SECRET);
+      if (payload.team_id && payload.team_name) {
+        req.headers['x-team-id'] = String(payload.team_id);
+        req.headers['x-team-name'] = payload.team_name;
+      }
+    } catch {}
+  }
+  next();
+}, createProxyMiddleware({
+  target: `http://127.0.0.1:${HUNT_PORT}`,
+  changeOrigin: true,
+  pathRewrite: { '^/treasure-hunt': '' },
+}));
 
 fetchSheet();
 
