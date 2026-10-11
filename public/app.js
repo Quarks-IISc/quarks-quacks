@@ -106,6 +106,16 @@
 
   function route() {
     var hash = (location.hash || '#home').slice(1);
+    if (hash.indexOf('sq-') === 0) {
+      var sqToken = decodeURIComponent(hash.slice(3));
+      if (teamData) { claimSidequest(sqToken); go('sidequest'); }
+      else {
+        try { sessionStorage.setItem('pending_sq', sqToken); } catch (e) {}
+        toast('Log in with your team to claim this Side Quest');
+        go('login');
+      }
+      return;
+    }
     if (hash === 'register') { go('login'); return; }
     if (hash === 'dashboard') {
       if (user) hash = 'admin';
@@ -114,6 +124,7 @@
     }
     if (hash === 'superuser') hash = 'admin';
     if (hash === 'participant' && !teamData) { go('login'); return; }
+    if (hash === 'sidequest' && !teamData && !user) { go('login'); return; }
     if (hash === 'admin' && !user) { go('login'); return; }
     if (hash === 'forgot' || hash === 'reset') { /* allow without auth */ }
 
@@ -136,6 +147,7 @@
     else if (hash === 'leaderboard') showLeaderboard();
     else if (hash === 'participant') showParticipant();
     else if (hash === 'admin') showAdmin();
+    else if (hash === 'sidequest') showSidequestPage();
   }
 
   window.addEventListener('hashchange', route);
@@ -256,8 +268,9 @@
     ctaAuth.style.display = loggedIn ? '' : 'none';
     loadSchedule();
     loadHomeLB();
+    loadHuntLB();
     if (lbTimer) clearInterval(lbTimer);
-    lbTimer = setInterval(loadHomeLB, 30000);
+    lbTimer = setInterval(function () { loadHomeLB(); loadHuntLB(); }, 30000);
   }
 
   var scheduleLoaded = false;
@@ -340,6 +353,33 @@
     } catch (e) {}
   }
 
+  function fmtDuration(secs) {
+    secs = Math.max(0, Math.round(secs));
+    var h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), sec = secs % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  async function loadHuntLB() {
+    var body = document.getElementById('th-lb-body');
+    if (!body) return;
+    try {
+      var rows = await api('GET', '/api/hunt/leaderboard');
+      body.innerHTML = rows.map(function (r) {
+        var rank = r.rank;
+        var cls = rank === 1 ? 'lb-gold' : rank === 2 ? 'lb-silver' : rank === 3 ? 'lb-bronze' : '';
+        return '<tr><td><span class="lb-rank ' + cls + '">' + (rank || '—') + '</span></td>' +
+          '<td>' + esc(r.team_name) + (r.test ? ' <span class="text-dim">(test)</span>' : '') + '</td>' +
+          '<td>' + (r.finished ? '<strong style="color:#4ecb71">Finished</strong>' : 'Clue ' + Math.min(r.progress + 1, r.total) + ' of ' + r.total) + '</td>' +
+          '<td>' + (r.finished ? fmtDuration(r.elapsed_seconds) : '<span class="text-dim">in progress</span>') + '</td>' +
+          '<td>+' + (r.hint_minutes || 0) + 'm <span class="text-dim">(' + (r.hints || 0) + ')</span></td>' +
+          '<td>+' + (r.skip_minutes || 0) + 'm <span class="text-dim">(' + (r.skips || 0) + ')</span></td>' +
+          '<td><span class="lb-points">' + (r.finished ? fmtDuration(r.final_seconds) : '—') + '</span></td></tr>';
+      }).join('') || '<tr><td colspan="7" class="text-dim">No team has started yet</td></tr>';
+    } catch (e) {
+      body.innerHTML = '<tr><td colspan="7" class="text-dim">Leaderboard unavailable</td></tr>';
+    }
+  }
+
   // ---- Auth Tabs (Login / Sign Up) ----
 
   document.querySelectorAll('.auth-tab').forEach(function (tab) {
@@ -387,6 +427,10 @@
     var fd = new FormData(this);
     var name = fd.get('team_name');
     var pw = fd.get('password');
+    var errBox = document.getElementById('login-error');
+    errBox.style.display = 'none';
+    var submitBtn = this.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
     try {
       var team = await api('POST', '/api/teams/login', {
         team_name: name,
@@ -395,6 +439,9 @@
       saveTeam(team);
       toast('Welcome, ' + team.team_name + '!', true);
       this.reset();
+      var pendingSq = null;
+      try { pendingSq = sessionStorage.getItem('pending_sq'); sessionStorage.removeItem('pending_sq'); } catch (e) {}
+      if (pendingSq) claimSidequest(pendingSq);
       go('participant');
     } catch (teamErr) {
       try {
@@ -404,16 +451,33 @@
         this.reset();
         go('dashboard');
       } catch (adminErr) {
-        toast(adminErr.message || teamErr.message);
+        // Explain what went wrong, in a message that stays on screen.
+        var msg;
+        if (/incorrect password/i.test(teamErr.message)) {
+          msg = 'Wrong password for team "' + String(name).trim() + '". Passwords are case-sensitive. Forgot it? Ask an admin to reset it.';
+        } else if (/team not found/i.test(teamErr.message) && /invalid credentials/i.test(adminErr.message)) {
+          msg = 'No team or admin called "' + String(name).trim() + '". Check the spelling of your team name exactly as you registered it.';
+        } else {
+          msg = adminErr.message || teamErr.message || 'Login failed. Please try again.';
+        }
+        errBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + esc(msg);
+        errBox.style.display = '';
+        toast('Login failed');
       }
+    } finally {
+      submitBtn.disabled = false;
     }
+  });
+
+  document.getElementById('team-login-form').addEventListener('input', function () {
+    document.getElementById('login-error').style.display = 'none';
   });
 
   // ---- Forgot Password ----
 
   document.getElementById('forgot-pw-link').addEventListener('click', function (e) {
     e.preventDefault();
-    go('forgot');
+    toast('Forgot your password? Ask any Quacks admin/volunteer to reset it for you.', true);
   });
 
   document.getElementById('forgot-form').addEventListener('submit', async function (e) {
@@ -468,9 +532,34 @@
         '<input type="text" name="' + prefix + idx + '_name" placeholder="Name *" required />' +
         '<input type="text" name="' + prefix + idx + '_dept" placeholder="Dept. / Where from?" />' +
       '</div>' +
-      '<input type="email" name="' + prefix + idx + '_email" placeholder="Email" />';
+      '<input type="email" name="' + prefix + idx + '_email" placeholder="Email (optional)" />';
     fieldset.appendChild(div);
+    syncPocEmail(fieldset);
   }
+
+  // Only the Point of Contact's email is required; the rest are optional.
+  function syncPocEmail(fieldset) {
+    var form = fieldset.closest('form');
+    var checked = form.querySelector('input[name="captain"]:checked');
+    var pocIdx = checked ? checked.value : '0';
+    fieldset.querySelectorAll('.member-row-stack').forEach(function (row) {
+      var email = row.querySelector('input[type="email"]');
+      if (!email) return;
+      var isPoc = String(row.dataset.idx) === String(pocIdx);
+      email.required = isPoc;
+      email.placeholder = isPoc ? 'Email * (Point of Contact, required)' : 'Email (optional)';
+    });
+  }
+
+  ['members-fieldset', 'su-members-fieldset'].forEach(function (id) {
+    var fs = document.getElementById(id);
+    if (!fs) return;
+    fs.addEventListener('change', function (e) {
+      if (e.target.name === 'captain') syncPocEmail(fs);
+    });
+    fs.closest('form').addEventListener('reset', function () { setTimeout(function () { syncPocEmail(fs); }, 0); });
+    syncPocEmail(fs);
+  });
 
   document.getElementById('add-member-btn').addEventListener('click', function () {
     addMemberRow(document.getElementById('members-fieldset'), 'm');
@@ -514,13 +603,13 @@
     if (!captain || !captain.email) { toast('Point of Contact must have an email'); return; }
     try {
       var data = await api('POST', '/api/teams', payload);
-      toast('Team registered! Check ' + captain.email + ' for OTP.', true);
+      toast('Team registered! You can log in now.', true);
+      // OTP verification is optional; prefill the verify view in case it's used.
       document.getElementById('verify-email').value = captain.email;
       document.getElementById('verify-msg').textContent =
-        'A 6-digit code has been sent to ' + captain.email;
-      saveTeam({ id: data.id, team_name: data.team_name });
+        'If you received a 6-digit code at ' + captain.email + ', enter it here.';
       form.reset();
-      go('verify');
+      go('login');
     } catch (err) {
       toast(err.message);
     }
@@ -584,9 +673,10 @@
 
       var hist = await api('GET', '/api/points/' + teamData.id);
       document.getElementById('p-history').innerHTML = hist.map(function (h) {
-        return '<tr><td>+' + h.points + '</td><td>' + esc(h.reason) + '</td><td>' + timeAgo(h.created_at) + '</td></tr>';
+        return '<tr><td>' + (h.points > 0 ? '+' : '') + h.points + '</td><td>' + esc(h.reason) + '</td><td>' + timeAgo(h.created_at) + '</td></tr>';
       }).join('') || '<tr><td colspan="3">No points yet</td></tr>';
 
+      loadSidequest();
       loadPlanner();
     } catch (err) {
       if (err.message === 'Not authenticated') {
@@ -741,6 +831,291 @@
     }
   });
 
+  // ---- Side Quests ----
+
+  // Dashboard preview: title + teaser, full page lives at #sidequest.
+  async function loadSidequest() {
+    var el = document.getElementById('p-sidequest');
+    if (!el) return;
+    try {
+      var q = await api('GET', '/api/sidequest/current');
+      if (q.completed) {
+        el.innerHTML = '<p class="text-dim">' + esc(q.message || 'No side quests yet. Check back soon!') + '</p>';
+        return;
+      }
+      var teaser = q.question.length > 90 ? q.question.slice(0, 90) + '…' : q.question;
+      el.innerHTML = '<p><span class="member-badge">' + q.points + ' pts</span> <strong>' + esc(q.title) + '</strong></p>' +
+        '<p class="card-sub" style="margin-top:0.4rem;white-space:pre-line">' + esc(teaser) + '</p>';
+    } catch (e) {
+      el.innerHTML = '<p class="text-dim">Side Quest unavailable</p>';
+    }
+  }
+
+  function showSidequestPage() {
+    var el = document.getElementById('sq-page');
+    if (el) el.dataset.qid = '';
+    loadSidequestPage();
+    loadSidequestWinners();
+  }
+
+  async function loadSidequestPage() {
+    var el = document.getElementById('sq-page');
+    if (!el) return;
+    try {
+      var q = await api('GET', '/api/sidequest/current');
+      if (q.completed) {
+        el.dataset.qid = '';
+        el.innerHTML = '<div class="sq-empty"><i class="fas fa-hourglass-half"></i>' +
+          '<h2>' + esc(q.message || 'No side quests yet. Check back soon!') + '</h2>' +
+          '<p class="card-sub">A new side quest can drop at any time. This page checks every few seconds.</p></div>';
+        return;
+      }
+      if (el.dataset.qid === q.id) return; // don't wipe a half-typed answer
+      el.dataset.qid = q.id;
+      var html = '<div class="sq-head"><span class="sq-label">' + esc(q.title) + '</span>' +
+        '<span class="sq-points">+' + q.points + ' pts</span></div>' +
+        '<p class="sq-question">' + esc(q.question) + '</p>';
+      if (!teamData) {
+        html += '<p class="card-sub">Admins can view the live side quest here. Teams answer from their login.</p>';
+      } else if (q.attempted) {
+        html += '<div class="sq-locked"><i class="fas fa-lock"></i> Your team has used its one try on this side quest. Wait for the next one!</div>';
+      } else if (q.answer_method === 'text') {
+        html += '<form id="sq-page-form" class="sq-form" autocomplete="off">' +
+          '<input type="text" name="answer" required placeholder="Type your answer… (one try only!)" />' +
+          '<button type="submit" class="btn"><i class="fas fa-paper-plane"></i> Submit Answer</button></form>';
+      } else {
+        html += '<a href="https://quarks.ug.iisc.ac.in/qr-scanner" target="_blank" rel="noopener" class="btn"><i class="fas fa-camera"></i> Open QR Scanner</a>';
+      }
+      html += '<p class="card-sub" style="margin-top:0.8rem"><i class="fas fa-bolt"></i> First team to solve it wins. Be quick!</p>';
+      el.innerHTML = html;
+      var form = document.getElementById('sq-page-form');
+      if (form) form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var btn = form.querySelector('button');
+        if (!confirm('You get ONE try per side quest. Submit this answer?')) return;
+        btn.disabled = true;
+        try {
+          var r = await api('POST', '/api/sidequest/answer', { answer: new FormData(form).get('answer'), quest_id: q.id });
+          toast('Correct! +' + r.points + ' points to your team!', true);
+          showSidequestPage();
+        } catch (err) {
+          toast(err.message);
+          showSidequestPage();
+        }
+      });
+    } catch (e) {
+      el.innerHTML = '<p class="text-dim">Side Quest unavailable</p>';
+    }
+  }
+
+  async function loadSidequestWinners() {
+    var tbody = document.getElementById('sq-winners');
+    if (!tbody) return;
+    try {
+      var list = await api('GET', '/api/sidequest/winners');
+      tbody.innerHTML = list.map(function (w) {
+        return '<tr><td>' + esc(w.title) + ' <span class="text-dim">(' + esc(w.quest_id) + ')</span></td><td>' + esc(w.team_name) +
+          '<br><span class="text-dim">' + timeAgo(w.created_at) + '</span></td><td>+' + w.points + '</td></tr>';
+      }).join('') || '<tr><td colspan="3" class="text-dim">None yet. Be the first!</td></tr>';
+    } catch (e) {
+      tbody.innerHTML = '<tr><td colspan="3" class="text-dim">—</td></tr>';
+    }
+  }
+
+  async function claimSidequest(token) {
+    try {
+      var r = await api('POST', '/api/sidequest/claim', { token: token });
+      toast('Side Quest "' + r.title + '" solved! +' + r.points + ' points', true);
+      if (location.hash === '#participant') showParticipant();
+    } catch (err) {
+      toast(err.message);
+    }
+  }
+
+  // ---- Side quest drop bell (teams) ----
+
+  var bellEl = document.getElementById('nav-bell');
+  var bellDot = document.getElementById('nav-bell-dot');
+  var SQ_SEEN_KEY = 'quarks_sq_seen';
+
+  function setBell(on) {
+    bellDot.classList.toggle('is-on', on);
+    bellEl.classList.toggle('is-ringing', on);
+  }
+
+  async function checkSidequestDrop() {
+    if (!teamData || user) { bellEl.style.display = 'none'; return; }
+    bellEl.style.display = '';
+    try {
+      var q = await api('GET', '/api/sidequest/current');
+      if (q.completed) { setBell(false); return; }
+      var seen = null;
+      try { seen = localStorage.getItem(SQ_SEEN_KEY); } catch (e) {}
+      if (location.hash === '#sidequest') {
+        try { localStorage.setItem(SQ_SEEN_KEY, q.id); } catch (e) {}
+        setBell(false);
+        return;
+      }
+      if (seen !== q.id && !q.attempted) {
+        if (!bellDot.classList.contains('is-on')) {
+          toast('🔔 New side quest dropped! Tap the bell to play.', true);
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        }
+        setBell(true);
+      } else {
+        setBell(false);
+      }
+    } catch (e) {}
+  }
+
+  bellEl.addEventListener('click', function () { setBell(false); });
+  window.addEventListener('hashchange', checkSidequestDrop);
+  setInterval(checkSidequestDrop, 10000);
+  setTimeout(checkSidequestDrop, 1500);
+
+  // Keep the participant's side quest fresh so teams see when it's been taken.
+  setInterval(function () {
+    if (location.hash === '#participant' || (location.hash === '#dashboard' && teamData && !user)) loadSidequest();
+    if (location.hash === '#sidequest') { loadSidequestPage(); loadSidequestWinners(); }
+  }, 5000);
+
+  // ---- Side Quest admin ----
+
+  async function loadSidequestAdmin() {
+    var tbody = document.getElementById('sq-admin-list');
+    if (!tbody) return;
+    try {
+      var list = await api('GET', '/api/sidequest/admin');
+      tbody.innerHTML = list.map(function (q) {
+        var color = q.status === 'active' ? '#4ecb71' : q.status === 'solved' ? '#8a8780' : q.status === 'needs answer' ? '#e06c6c' : '';
+        var actions = q.status === 'solved' ? '' :
+          '<button type="button" class="btn btn-compact btn-outline" data-sq-edit="' + esc(q.id) + '">Edit answer</button> ' +
+          '<button type="button" class="btn btn-compact btn-danger" data-sq-del="' + esc(q.id) + '"><i class="fas fa-trash"></i></button>';
+        return '<tr><td>' + esc(q.id) + '</td>' +
+          '<td style="color:' + color + ';font-weight:600">' + esc(q.status) + '</td>' +
+          '<td style="white-space:pre-line;max-width:320px">' + esc(q.title) + ': ' + esc(q.question) + '</td>' +
+          '<td>' + esc((q.answer || []).join(', ')) + '</td>' +
+          '<td>' + q.points + '</td>' +
+          '<td>' + (q.solved_by ? esc(q.solved_by) + '<br><span class="text-dim">' + esc(q.solved_at || '') + '</span>' : '—') + '</td>' +
+          '<td>' + actions + '</td></tr>';
+      }).join('') || '<tr><td colspan="7" class="text-dim">No side quests yet</td></tr>';
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="7">' + esc(err.message) + '</td></tr>';
+    }
+  }
+
+  document.getElementById('refresh-sq-admin').addEventListener('click', loadSidequestAdmin);
+
+  document.getElementById('sq-admin-list').addEventListener('click', async function (e) {
+    var edit = e.target.closest('[data-sq-edit]');
+    var del = e.target.closest('[data-sq-del]');
+    try {
+      if (edit) {
+        var ans = prompt('New answer(s) for ' + edit.dataset.sqEdit + ' (comma separated):');
+        if (!ans) return;
+        await api('PUT', '/api/sidequest/admin/' + encodeURIComponent(edit.dataset.sqEdit), { answer: ans });
+        toast('Answer updated', true);
+      } else if (del) {
+        if (!confirm('Delete side quest ' + del.dataset.sqDel + '?')) return;
+        await api('DELETE', '/api/sidequest/admin/' + encodeURIComponent(del.dataset.sqDel));
+        toast('Deleted', true);
+      } else return;
+      loadSidequestAdmin();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+
+  document.getElementById('sq-add-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    try {
+      var q = await api('POST', '/api/sidequest/admin', {
+        title: fd.get('title'), question: fd.get('question'), answer: fd.get('answer'), points: fd.get('points')
+      });
+      toast('Added ' + q.id + ' to the queue', true);
+      this.reset();
+      loadSidequestAdmin();
+    } catch (err) {
+      toast(err.message);
+    }
+  });
+
+  // ---- Team Photos (treasure hunt) ----
+
+  function isHuntAdmin() {
+    if (!user) return false;
+    if (user.role === 'superuser') return true;
+    return (user.event_names || []).indexOf('Duck Duck Loot') !== -1;
+  }
+
+  async function loadHuntPhotos() {
+    var el = document.getElementById('admin-photos-container');
+    if (!el) return;
+    el.innerHTML = '<p class="text-dim">Loading…</p>';
+    try {
+      var photos = await api('GET', '/api/hunt/photos');
+      var byTeam = {};
+      photos.forEach(function (p) { (byTeam[p.team_name] = byTeam[p.team_name] || []).push(p); });
+      var names = Object.keys(byTeam).sort(function (a, b) { return a.localeCompare(b); });
+      el.innerHTML = names.map(function (name) {
+        return '<div class="photo-team"><h3>' + esc(name) + ' <small class="text-dim">(' + byTeam[name].length + ')</small></h3><div class="photo-grid">' +
+          byTeam[name].map(function (p) {
+            var src = '/api/hunt/photos/' + encodeURIComponent(p.filename);
+            return '<a class="photo-item" href="' + src + '" target="_blank" rel="noopener">' +
+              '<img src="' + src + '" alt="" loading="lazy" />' +
+              '<span>' + esc(p.quest_title || p.quest_id || '') + '</span>' +
+              '<span class="text-dim">' + esc(p.uploaded_at || '') + '</span></a>';
+          }).join('') + '</div></div>';
+      }).join('') || '<p class="text-dim">No photos uploaded yet</p>';
+    } catch (err) {
+      el.innerHTML = '<p class="text-dim">' + esc(err.message) + '</p>';
+    }
+  }
+
+  document.getElementById('refresh-photos').addEventListener('click', loadHuntPhotos);
+
+  function fmtDuration(secs) {
+    if (secs === null || secs === undefined) return '—';
+    var h = Math.floor(secs / 3600), m = Math.floor(secs / 60) % 60, sec = secs % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  function fmtClock(iso) {
+    if (!iso) return '—';
+    var m = String(iso).match(/T(\d\d:\d\d)/);
+    return m ? m[1] : esc(iso);
+  }
+
+  async function loadHuntProgress() {
+    var tbody = document.getElementById('hunt-progress-body');
+    if (!tbody) return;
+    try {
+      var rows = await api('GET', '/api/hunt/progress');
+      tbody.innerHTML = rows.map(function (r) {
+        var pct = r.total ? Math.round(r.progress / r.total * 100) : 0;
+        return '<tr' + (r.finished ? ' style="background:rgba(78,203,113,0.08)"' : '') + '>' +
+          '<td>' + (r.rank || '') + '</td>' +
+          '<td>' + esc(r.team_name) + (r.test ? ' <span class="text-dim">(test)</span>' : '') + '</td>' +
+          '<td><div class="hp-bar"><span style="width:' + pct + '%"></span></div>' + r.progress + '/' + r.total + '</td>' +
+          '<td>' + (r.finished ? '<strong style="color:#4ecb71">Finished ' + fmtClock(r.finished_at) + '</strong>' :
+            r.current_location ? 'Clue ' + r.current_clue + ': ' + esc(r.current_location) : '—') + '</td>' +
+          '<td>' + r.hints + '</td><td>' + r.skips + '</td>' +
+          '<td>+' + r.penalty_minutes + 'm</td>' +
+          '<td>' + fmtClock(r.last_activity) + '</td>' +
+          '<td><strong>' + fmtDuration(r.final_seconds) + '</strong></td></tr>';
+      }).join('') || '<tr><td colspan="9" class="text-dim">No teams have opened the hunt yet</td></tr>';
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="9">' + esc(err.message) + '</td></tr>';
+    }
+  }
+
+  document.getElementById('refresh-hunt-progress').addEventListener('click', loadHuntProgress);
+  setInterval(function () {
+    var panel = document.getElementById('admin-hunt-progress');
+    if (location.hash === '#admin' && panel && panel.style.display !== 'none') loadHuntProgress();
+  }, 15000);
+
   // ---- Admin (unified with superuser) ----
 
   async function showAdmin() {
@@ -753,6 +1128,9 @@
 
     document.querySelectorAll('.su-only').forEach(function (el) {
       el.style.display = isSuperuser ? '' : 'none';
+    });
+    document.querySelectorAll('.su-tab.th-only').forEach(function (el) {
+      el.style.display = isHuntAdmin() ? '' : 'none';
     });
 
     loadAdminHistory();
@@ -769,6 +1147,9 @@
       document.querySelectorAll('.su-panel').forEach(function (p) { p.style.display = 'none'; });
       tab.classList.add('is-active');
       document.getElementById(tab.dataset.tab).style.display = '';
+      if (tab.dataset.tab === 'admin-photos') loadHuntPhotos();
+      if (tab.dataset.tab === 'admin-hunt-progress') loadHuntProgress();
+      if (tab.dataset.tab === 'admin-sidequests') loadSidequestAdmin();
     });
   });
 
@@ -828,10 +1209,14 @@
       if (!logs.length) {
         document.getElementById('thp-list').innerHTML = '<p class="text-dim">No points awarded yet</p>';
       } else {
-        document.getElementById('thp-list').innerHTML = '<table><thead><tr><th>Points</th><th>Reason</th><th>When</th></tr></thead><tbody>' +
+        var total = logs.reduce(function (sum, l) { return sum + (parseInt(l.points, 10) || 0); }, 0);
+        document.getElementById('thp-list').innerHTML =
+          '<div class="thp-total">TOTAL: <strong' + (total < 0 ? ' style="color:#e06c6c"' : '') + '>' + total + '</strong> points</div>' +
+          '<table><thead><tr><th>Points</th><th>Reason</th><th>When</th></tr></thead><tbody>' +
           logs.slice(0, 10).map(function (l) {
-            return '<tr><td>+' + l.points + '</td><td>' + esc(l.reason || '—') + '</td><td>' + timeAgo(l.created_at) + '</td></tr>';
-          }).join('') + '</tbody></table>';
+            return '<tr><td>' + (l.points > 0 ? '+' : '') + l.points + '</td><td>' + esc(l.reason || '—') + '</td><td>' + timeAgo(l.created_at) + '</td></tr>';
+          }).join('') + '</tbody>' +
+          '<tfoot><tr><th>' + total + '</th><th colspan="2">TOTAL' + (logs.length > 10 ? ' (all ' + logs.length + ' entries)' : '') + '</th></tr></tfoot></table>';
       }
       wrap.style.display = '';
     } catch (e) { wrap.style.display = 'none'; }
@@ -850,8 +1235,8 @@
     'participation': 50,
     '1st': null, '2nd': null, '3rd': null,
     'side_quest': 100,
-    'ticket_100': 100,
-    'ticket_300': 300,
+    'ticket_minus_100': -100,
+    'ticket_minus_300': -300,
     'custom': null
   };
   var COMPETITION_POINTS = { '1st': 1200, '2nd': 900, '3rd': 600 };
@@ -869,8 +1254,8 @@
     '2nd': '2nd Place',
     '3rd': '3rd Place',
     'side_quest': 'Side Quest completion',
-    'ticket_100': '100 Point Ticket',
-    'ticket_300': '300 Point Ticket'
+    'ticket_minus_100': '-100 Point Ticket',
+    'ticket_minus_300': '-300 Point Ticket'
   };
 
   (async function loadAwardEvents() {
@@ -913,7 +1298,8 @@
       }
     }
     var reason = REASON_MAP[pl] || '';
-    if (reason && evName && evName !== '— Custom points —') reason = reason + ' — ' + evName;
+    // Only tag a real event onto the reason; never the placeholder option text.
+    if (reason && aEventSelect.value && evName) reason = reason + ' — ' + evName;
     aReasonInput.value = reason;
     aReasonInput.readOnly = !!reason;
   });
@@ -946,11 +1332,11 @@
     var d = getAwardData();
     if (!d) return;
     try {
-      await api('POST', '/api/points', {
+      var res = await api('POST', '/api/points', {
         team_id: d.team_id, amount: d.amount, reason: d.reason,
         event_id: d.event_id, placement: d.placement
       });
-      toast('Points awarded!', true);
+      toast('Points awarded! New TOTAL: ' + res.total, true);
       d.form.reset();
       document.getElementById('team-history-preview').style.display = 'none';
       loadAdminHistory();
@@ -1020,6 +1406,9 @@
   document.getElementById('su-admin-list').addEventListener('click', async function (e) {
     var btn = e.target.closest('[data-del-admin]');
     if (!btn) return;
+    var row = btn.closest('tr');
+    var who = row && row.cells[0] ? row.cells[0].textContent.trim() : 'this admin';
+    if (!confirm('Delete admin "' + who + '"? They will no longer be able to log in.')) return;
     try {
       await api('DELETE', '/api/admins/' + btn.dataset.delAdmin);
       toast('Admin removed', true);
@@ -1111,7 +1500,7 @@
         '</div>' +
         '<div class="td-field">' +
           '<label>Points</label>' +
-          '<input type="number" id="td-points" value="' + t.points + '" min="-5000" max="99999" />' +
+          '<input type="number" id="td-points" value="' + t.points + '" min="-99999" max="99999" />' +
         '</div>' +
         '<div class="td-field">' +
           '<label>Verified</label>' +
@@ -1197,6 +1586,15 @@
     });
   }
 
+  document.getElementById('td-reset-pw').addEventListener('click', async function () {
+    var pw = prompt('New password for this team (min 4 characters):');
+    if (!pw) return;
+    try {
+      await api('POST', '/api/teams/' + currentDetailTeamId + '/password', { password: pw });
+      toast('Password reset. Tell the team their new password.', true);
+    } catch (err) { toast(err.message); }
+  });
+
   document.getElementById('td-delete-team').addEventListener('click', async function () {
     if (!confirm('DELETE this entire team? This cannot be undone.')) return;
     try {
@@ -1251,7 +1649,9 @@
 
   // ---- Countdown ----
 
+  // Registrations/leaderboard open from midnight; the countdown runs to the 10:00 AM start.
   var EVENT_DATE = new Date('2026-10-11T00:00:00+05:30').getTime();
+  var START_DATE = new Date('2026-10-11T10:00:00+05:30').getTime();
   var isLive = Date.now() >= EVENT_DATE;
 
   function pad(n) { return n < 10 ? '0' + n : n; }
@@ -1265,10 +1665,10 @@
     var sEl = document.getElementById('qp-secs');
 
     function tick() {
-      var diff = EVENT_DATE - Date.now();
+      if (!isLive && Date.now() >= EVENT_DATE) goLive();
+      var diff = START_DATE - Date.now();
       if (diff <= 0) {
         wrap.classList.add('is-live');
-        goLive();
         return;
       }
       dEl.textContent = pad(Math.floor(diff / 86400000));
@@ -1308,7 +1708,10 @@
       el.classList.remove('pre-event-hide');
     });
     var cd = document.getElementById('countdown');
-    if (cd) cd.classList.add('is-live');
+    if (cd) {
+      cd.querySelectorAll('.countdown-soon, .countdown-info').forEach(function (el) { el.style.display = 'none'; });
+      if (Date.now() >= START_DATE) cd.classList.add('is-live');
+    }
     updateNav();
   }
 
@@ -1317,7 +1720,7 @@
   async function init() {
     await checkAuth();
     if (isLive) goLive();
-    else startCountdown();
+    startCountdown();
     updateNav();
     route();
   }

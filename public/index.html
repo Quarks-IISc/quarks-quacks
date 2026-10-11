@@ -15,12 +15,17 @@
   <!-- NAV -->
   <nav class="nav" id="nav">
     <a href="#home" class="nav-brand">Quarks <span>Quacks</span></a>
+    <a href="#sidequest" class="nav-bell" id="nav-bell" title="Side quest alerts" style="display:none">
+      <span class="nav-bell-marquee"><span class="nav-bell-text">New Side Quest just Popped up!</span></span>
+      <i class="fas fa-bell"></i><span class="nav-bell-dot" id="nav-bell-dot"></span>
+    </a>
     <button class="nav-toggle" id="nav-toggle" aria-label="Menu"><i class="fas fa-bars"></i></button>
     <div class="nav-links" id="nav-links">
       <a href="#home" data-nav="home"><i class="fas fa-home"></i> Home</a>
       <a href="#home" data-scroll="lb-section" class="pre-event-hide"><i class="fas fa-trophy"></i> Leaderboard</a>
       <a href="#login" data-nav="login" data-guest><i class="fas fa-sign-in-alt"></i> Login / Sign Up</a>
       <a href="#dashboard" data-nav="dashboard" data-auth><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+      <a href="#sidequest" data-nav="sidequest" data-auth><i class="fas fa-map-marked-alt"></i> Side Quest</a>
       <a href="#" id="logout-btn" data-auth><i class="fas fa-sign-out-alt"></i> Logout</a>
     </div>
   </nav>
@@ -76,6 +81,33 @@
             <img class="handbook-thumb" src="handbook-thumb.webp" alt="Quarks Quacks Handbook" loading="lazy" />
             <span class="handbook-dl"><i class="fas fa-download"></i> Download PDF</span>
           </a>
+        </div>
+
+        <!-- Quick Rules -->
+        <div class="home-section rules-section">
+          <h2 class="section-title"><i class="fas fa-gavel"></i> Quick Rules</h2>
+          <div class="rules-grid" id="rules-grid">
+            <div class="rule-card">
+              <div class="rule-icon"><i class="fas fa-map-marked-alt"></i></div>
+              <h3>Side Quests</h3>
+              <ul>
+                <li><strong>Only 1 team</strong> can win each side quest: the first correct answer takes it, and then it's gone.</li>
+                <li>You get <strong>only 1 try</strong> per side quest, so make it count.</li>
+                <li>Side quest points add straight to your <strong>Quacks points</strong>.</li>
+              </ul>
+            </div>
+            <div class="rule-card">
+              <div class="rule-icon"><i class="fas fa-search-location"></i></div>
+              <h3>Treasure Hunt</h3>
+              <ul>
+                <li>Starts at <strong>10:15 AM sharp</strong>.</li>
+                <li>10 problems: the <strong>first 5 come in a random order</strong> for each team, and the <strong>last 5 are in a fixed order</strong>.</li>
+                <li><strong>Upload your team picture</strong> at every location for verification. If you don't, you will be <strong>disqualified</strong>.</li>
+                <li>If you start late, <strong>no compensation</strong> will be given.</li>
+                <li>Closes at <strong>1:00 PM sharp</strong>.</li>
+              </ul>
+            </div>
+          </div>
         </div>
 
         <!-- Schedule popup -->
@@ -166,6 +198,21 @@
           </div>
         </div>
 
+        <!-- Treasure Hunt Leaderboard -->
+        <div class="home-section pre-event-hide" id="th-lb-section">
+          <h2 class="section-title"><i class="fas fa-search-location"></i> Treasure Hunt Leaderboard</h2>
+          <div class="card card-wide">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Team</th><th>Problem</th><th>Time Taken</th><th>Hint Delay</th><th>Skip Delay</th><th>Final Time</th></tr></thead>
+                <tbody id="th-lb-body">
+                  <tr><td colspan="7" class="text-dim">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -181,7 +228,7 @@
         <div class="auth-panel" id="login-panel">
           <form id="team-login-form" autocomplete="on">
             <label>Team Name / Username
-              <input type="text" name="team_name" required placeholder="Enter your team name or username" autocomplete="organization" />
+              <input type="text" name="team_name" required placeholder="Enter your team name or username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" />
             </label>
             <label>Password
               <div class="password-wrap">
@@ -189,9 +236,10 @@
                 <button type="button" class="pw-toggle" tabindex="-1"><i class="fas fa-eye"></i></button>
               </div>
             </label>
+            <div class="login-error" id="login-error" role="alert" style="display:none"></div>
             <button type="submit" class="btn"><i class="fas fa-sign-in-alt"></i> Login</button>
           </form>
-          <p class="card-foot"><a href="#" id="forgot-pw-link">Forgot password?</a></p>
+          <p class="card-foot"><a href="#" id="forgot-pw-link">Forgot password?</a> <span class="text-dim">Ask an admin to reset it.</span></p>
         </div>
 
         <!-- Register panel -->
@@ -304,6 +352,11 @@
             <p class="card-sub">Show this to an admin to get points</p>
             <div id="p-qr-code" style="margin:0.8rem auto;display:inline-block;background:#fff;padding:12px;border-radius:8px"></div>
           </div>
+          <div class="card" id="p-sidequest-card">
+            <h2><i class="fas fa-map-marked-alt"></i> Side Quest</h2>
+            <div id="p-sidequest"><p class="text-dim">Loading…</p></div>
+            <a href="#sidequest" class="btn" style="margin-top:0.6rem"><i class="fas fa-arrow-right"></i> Open Side Quest</a>
+          </div>
           <div class="card">
             <h2><i class="fas fa-search-location"></i> Treasure Hunt</h2>
             <p class="card-sub">Duck Duck Loot — solve clues and find QR codes across campus</p>
@@ -324,6 +377,40 @@
               <thead><tr><th>Points</th><th>Reason</th><th>When</th></tr></thead>
               <tbody id="p-history"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SIDE QUEST PAGE -->
+    <section class="view" id="view-sidequest">
+      <div class="fade-in">
+        <div class="dash-header">
+          <h1><i class="fas fa-map-marked-alt"></i> Side Quest</h1>
+          <p class="card-sub">One quest at a time. The first team to crack it takes the points, then the next one unlocks.</p>
+        </div>
+        <div class="card card-wide sq-hero">
+          <div id="sq-page"><p class="text-dim">Loading…</p></div>
+        </div>
+        <div class="dash-grid">
+          <div class="card">
+            <h2><i class="fas fa-scroll"></i> Rules</h2>
+            <ul class="sq-rules">
+              <li>Only <strong>one team</strong> can win each side quest: the first correct answer.</li>
+              <li>Answers are not case-sensitive. Spelling matters.</li>
+              <li>You get <strong>only one try</strong> per side quest. A wrong answer locks your team out of that one.</li>
+              <li>This page refreshes by itself. If another team wins, the next quest appears.</li>
+              <li>Points go straight into your Quacks total.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h2><i class="fas fa-trophy"></i> Solved So Far</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Quest</th><th>Won by</th><th>Pts</th></tr></thead>
+                <tbody id="sq-winners"><tr><td colspan="3" class="text-dim">Loading…</td></tr></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -366,6 +453,9 @@
           <button class="su-tab" data-tab="admin-teams">Teams</button>
           <button class="su-tab su-only" data-tab="admin-manage" style="display:none">Manage Admins</button>
           <button class="su-tab su-only" data-tab="admin-register" style="display:none">Register Team</button>
+          <button class="su-tab" data-tab="admin-sidequests">Side Quests</button>
+          <button class="su-tab th-only" data-tab="admin-hunt-progress" style="display:none">Hunt Progress</button>
+          <button class="su-tab th-only" data-tab="admin-photos" style="display:none">Team Photos</button>
         </div>
 
         <!-- Award Points tab -->
@@ -387,7 +477,7 @@
               <button type="button" class="btn btn-compact" id="open-qr-scan" style="margin:0.5rem 0"><i class="fas fa-qrcode"></i> Scan QR</button>
               <label>Event
                 <select name="event_id" id="a-event-select">
-                  <option value="">— Custom points —</option>
+                  <option value="">-- Select Event --</option>
                 </select>
               </label>
               <label>Placement
@@ -399,8 +489,8 @@
                   <option value="2nd">2nd Place</option>
                   <option value="3rd">3rd Place</option>
                   <option value="side_quest">Side Quest (+100)</option>
-                  <option value="ticket_100" class="hunt-only" style="display:none">100 Point Ticket (+100)</option>
-                  <option value="ticket_300" class="hunt-only" style="display:none">300 Point Ticket (+300)</option>
+                  <option value="ticket_minus_100">-100 Point Ticket (−100)</option>
+                  <option value="ticket_minus_300">-300 Point Ticket (−300)</option>
                   <option value="custom">Custom amount</option>
                 </select>
               </label>
@@ -457,6 +547,63 @@
                 <tbody id="su-admin-list"></tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <!-- Team Photos tab (superuser + treasure hunt admins only) -->
+        <!-- Side Quests tab (all admins) -->
+        <div class="su-panel" id="admin-sidequests" style="display:none">
+          <div class="card">
+            <h2><i class="fas fa-plus"></i> Add Side Quest</h2>
+            <p class="card-sub">Only the first team to answer gets the points, then the next quest opens.</p>
+            <form id="sq-add-form" autocomplete="off">
+              <label>Title <small>(optional, shown to teams)</small>
+                <input type="text" name="title" maxlength="80" placeholder="Side Quest" />
+              </label>
+              <label>Question *
+                <textarea name="question" required rows="4"></textarea>
+              </label>
+              <label>Answer(s) * <small>(comma separated for alternatives; case-insensitive)</small>
+                <input type="text" name="answer" required />
+              </label>
+              <label>Points
+                <input type="number" name="points" value="100" min="1" max="5000" />
+              </label>
+              <button type="submit" class="btn btn-compact"><i class="fas fa-plus"></i> Add to Queue</button>
+            </form>
+          </div>
+          <div class="card card-wide">
+            <h2><i class="fas fa-list"></i> Side Quest Queue</h2>
+            <button type="button" class="btn btn-compact" id="refresh-sq-admin" style="margin-bottom:0.8rem"><i class="fas fa-sync"></i> Refresh</button>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>Status</th><th>Question</th><th>Answer</th><th>Pts</th><th>Solved by</th><th></th></tr></thead>
+                <tbody id="sq-admin-list"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hunt Progress tab (TH admins + superuser) -->
+        <div class="su-panel th-only" id="admin-hunt-progress" style="display:none">
+          <div class="card card-wide">
+            <h2><i class="fas fa-route"></i> Treasure Hunt Progress</h2>
+            <p class="card-sub">Auto-refreshes every 15s. Final time = finish from 10:15 AM + 29m/skip + 12m/hint.</p>
+            <button type="button" class="btn btn-compact" id="refresh-hunt-progress" style="margin-bottom:0.8rem"><i class="fas fa-sync"></i> Refresh</button>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Team</th><th>Progress</th><th>Now at</th><th>Hints</th><th>Skips</th><th>Penalty</th><th>Last scan</th><th>Final time</th></tr></thead>
+                <tbody id="hunt-progress-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="su-panel th-only" id="admin-photos" style="display:none">
+          <div class="card card-wide">
+            <h2><i class="fas fa-camera"></i> Team Photos</h2>
+            <button type="button" class="btn btn-compact" id="refresh-photos" style="margin-bottom:0.8rem"><i class="fas fa-sync"></i> Refresh</button>
+            <div id="admin-photos-container"><p class="text-dim">Loading…</p></div>
           </div>
         </div>
 
@@ -538,6 +685,10 @@
             <tbody id="td-logs"></tbody>
           </table>
         </div>
+      </div>
+
+      <div class="td-section">
+        <button class="btn btn-compact" id="td-reset-pw"><i class="fas fa-key"></i> Reset Team Password</button>
       </div>
 
       <div class="td-section td-danger">

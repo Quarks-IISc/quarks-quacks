@@ -11,6 +11,8 @@ const authRoutes = require('./routes/auth-routes');
 const adminRoutes = require('./routes/admin-routes');
 const teamRoutes = require('./routes/team-routes');
 const pointsRoutes = require('./routes/points-routes');
+const sidequestRoutes = require('./routes/sidequest-routes');
+const huntRoutes = require('./routes/hunt-routes');
 const { fetchSheet, getEvents } = require('./sheet-cache');
 
 const app = express();
@@ -29,12 +31,21 @@ const PORT = getPort();
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Always revalidate so phones pick up UI changes during the event.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res) => res.set('Cache-Control', 'no-cache')
+}));
 
 app.use('/api', authRoutes);
 app.use('/api/admins', adminRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/points', pointsRoutes);
+app.use('/api/sidequest', sidequestRoutes);
+app.use('/api/hunt', huntRoutes);
+
+app.get('/sq/:token', (req, res) => {
+  res.redirect('/#sq-' + encodeURIComponent(req.params.token));
+});
 
 app.get('/api/events', (_req, res) => {
   const db = require('./db');

@@ -24,16 +24,13 @@ router.post('/', (req, res) => {
   const captain = members.find(m => m.is_captain) || members.find(m => m.email) || members[0];
   if (!captain.email) return res.status(400).json({ error: 'Point of Contact must have an email' });
 
-  const exists = db.findOne('teams', t => t.team_name === team_name);
+  const exists = db.findOne('teams', t => t.team_name.toLowerCase() === String(team_name).trim().toLowerCase());
   if (exists) return res.status(409).json({ error: 'Team name already taken' });
 
-  const otp = generateOtp();
-  const otpHash = bcrypt.hashSync(otp, 10);
   const passwordHash = bcrypt.hashSync(password, 10);
-  const expires = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
   const { id: teamId } = db.insert('teams', {
-    team_name, password_hash: passwordHash, points: 100, created_at: db.now(), verified: 0
+    team_name, password_hash: passwordHash, points: 100, created_at: db.now(), verified: 1
   });
 
   db.insert('point_logs', {
@@ -46,20 +43,13 @@ router.post('/', (req, res) => {
     });
   }
 
-  db.insert('otps', { email: captain.email, otp_hash: otpHash, expires_at: expires, used: 0 });
-
+  // No email OTP: teams are verified on registration.
   console.log('[TEAM] Registered: "' + team_name + '" (id: ' + teamId + ')');
-
-  sendOtp(captain.email, otp, team_name).catch(err => {
-    console.error('Failed to send OTP email:', err.message);
-  });
-  console.log('[OTP] Sent to', captain.email, 'for team "' + team_name + '"');
 
   res.status(201).json({
     id: teamId,
     team_name,
-    otp_email: captain.email,
-    message: 'A verification code has been sent to ' + captain.email
+    message: 'Team registered! You can log in now.'
   });
 });
 
@@ -91,12 +81,13 @@ router.post('/verify', (req, res) => {
 });
 
 router.post('/login', (req, res) => {
-  const { team_name, password } = req.body;
+  const team_name = String(req.body.team_name || '').trim();
+  const password = String(req.body.password || '');
   if (!team_name || !password) return res.status(400).json({ error: 'Team name and password required' });
 
-  const team = db.findOne('teams', t => t.team_name === team_name);
+  const team = db.findOne('teams', t => t.team_name.toLowerCase() === team_name.toLowerCase());
   if (!team) return res.status(404).json({ error: 'Team not found' });
-  if (!team.password_hash || !bcrypt.compareSync(password, team.password_hash)) {
+  if (!team.password_hash || !(bcrypt.compareSync(password, team.password_hash) || bcrypt.compareSync(password.trim(), team.password_hash))) {
     return res.status(401).json({ error: 'Incorrect password' });
   }
 
@@ -218,6 +209,16 @@ router.get('/:id', requireAuth, (req, res) => {
   });
 });
 
+router.post('/:id/password', requireAuth, requireRole('superuser', 'admin'), (req, res) => {
+  const team = db.get('teams', parseInt(req.params.id));
+  if (!team) return res.status(404).json({ error: 'Team not found' });
+  const pw = String(req.body.password || '');
+  if (pw.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters' });
+  db.update('teams', team.id, { password_hash: bcrypt.hashSync(pw, 10) });
+  console.log('[PASSWORD] Reset for team "' + team.team_name + '" by ' + req.user.username);
+  res.json({ ok: true });
+});
+
 router.patch('/:id', requireAuth, requireRole('superuser'), (req, res) => {
   const id = parseInt(req.params.id);
   const team = db.get('teams', id);
@@ -296,7 +297,6 @@ router.post('/:id/events', (req, res) => {
   const teamId = parseInt(req.params.id);
   const team = db.get('teams', teamId);
   if (!team) return res.status(404).json({ error: 'Team not found' });
-  if (!team.verified) return res.status(400).json({ error: 'Team not verified yet' });
 
   const event = db.get('events', event_id);
   if (!event) return res.status(404).json({ error: 'Event not found' });

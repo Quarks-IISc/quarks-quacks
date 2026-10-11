@@ -1,0 +1,74 @@
+[
+  {
+    "id": "S1",
+    "original_order": 1,
+    "answer_method": "text",
+    "title": "Side Quest",
+    "location": "Sarvam - 1st item on blackboard",
+    "question": "At the counter that draws a crowd even at 4 AM,\nHangs a handwritten list of midnight cravings.\nTo unlock your path, enter the very first item at the top",
+    "answer": [
+      "__FILL_IN_ANSWER__"
+    ],
+    "points": 100
+  },
+  {
+    "id": "S2",
+    "original_order": 2,
+    "answer_method": "text",
+    "title": "Side Quest",
+    "location": "The 4 Trees",
+    "question": "The older they get the more they lean\nBut the familial bonds never die.\nFind the FAMILY of four,\nnear the start of IISC's glory.",
+    "answer": [
+      "ARAUCARIACEAE"
+    ],
+    "points": 100
+  },
+  {
+    "id": "S3",
+    "original_order": 3,
+    "answer_method": "text",
+    "title": "Side Quest",
+    "location": "The Stone Walkway Pillars",
+    "question": "Near the house of proofs, shelters an old corridor, the one cool walk of its kind. Iron crosses over stone halfway along. Stone guards stand in two ranks, one on each side of you. Count each rank from end to end, bridge or no bridge, then let the two armies meet and bring back what they make when multiplied.",
+    "answer": [
+      "1190"
+    ],
+    "points": 100
+  },
+  {
+    "id": "S4",
+    "original_order": 4,
+    "answer_method": "text",
+    "title": "Side Quest",
+    "location": "The Fishes at the entrance of Nesara",
+    "question": "A place of eateries that has REOPENED,\nHouses little swimmers at its ingress.\nHow many, I wonder?",
+    "answer": [
+      "__FILL_IN_ANSWER__"
+    ],
+    "points": 100
+  },
+  {
+    "id": "S5",
+    "original_order": 5,
+    "answer_method": "text",
+    "title": "Side Quest",
+    "location": "The Duck at the entrance of OPB",
+    "question": "As you enter today's crowded venue by the entrance that isn't considered main, you will find the mascot greeting you and hiding something behind his back. What could it be?!",
+    "answer": [
+      "__FILL_IN_ANSWER__"
+    ],
+    "points": 100
+  },
+  {
+    "id": "S6",
+    "original_order": 6,
+    "answer_method": "text",
+    "title": "Side Quest",
+    "location": "The Chemical Science Tree",
+    "question": "Where chemists moved in before the scaffolding came down, a green resident stayed behind and took root indoors. It has one reaction, and it is slow. Beneath the glass sky, search where it drinks.",
+    "answer": [
+      "__FILL_IN_ANSWER__"
+    ],
+    "points": 100
+  }
+]

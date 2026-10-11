@@ -11,13 +11,9 @@ node server.js          # runs on http://localhost:3001
 
 The SQLite database (`quarks-points.db`) is created automatically on first run with 27 seeded events and a superuser account.
 
-### Default superuser
+### Superuser
 
-| Username | Password |
-|----------|----------|
-| `mohini` | `qwerty` |
-
-Change the password after first login.
+A superuser account is seeded on first run (see `db.js`). Ask the organisers for credentials; never commit them here.
 
 ### Email (OTP verification)
 

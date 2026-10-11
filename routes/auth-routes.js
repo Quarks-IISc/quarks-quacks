@@ -6,11 +6,13 @@ const { signToken, requireAuth } = require('../auth');
 const router = express.Router();
 
 router.post('/login', (req, res) => {
-  const { username, password } = req.body;
+  const username = String(req.body.username || '').trim();
+  const password = String(req.body.password || '');
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
-  const user = db.findOne('users', u => u.username === username);
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+  // Case-insensitive username; tolerate stray spaces from phone keyboards in the password.
+  const user = db.findOne('users', u => u.username.toLowerCase() === username.toLowerCase());
+  if (!user || !(bcrypt.compareSync(password, user.password_hash) || bcrypt.compareSync(password.trim(), user.password_hash))) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 

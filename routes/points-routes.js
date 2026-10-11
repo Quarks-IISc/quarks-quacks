@@ -6,6 +6,9 @@ const { requireAuth, requireRole } = require('../auth');
 
 const router = express.Router();
 
+// Test accounts never show on the public leaderboard.
+const HIDDEN_TEAMS = ['test'];
+
 router.post('/', requireAuth, requireRole('superuser', 'admin'), (req, res) => {
   const { team_id, amount, reason, event_id, placement } = req.body;
   if (!team_id || amount === undefined) {
@@ -17,7 +20,6 @@ router.post('/', requireAuth, requireRole('superuser', 'admin'), (req, res) => {
 
   const team = db.get('teams', team_id);
   if (!team) return res.status(404).json({ error: 'Team not found' });
-  if (!team.verified) return res.status(400).json({ error: 'Team not verified yet' });
 
   const logEntry = {
     team_id, points: pts, reason: reason || null, awarded_by: req.user.id, created_at: db.now()
@@ -40,7 +42,7 @@ router.post('/', requireAuth, requireRole('superuser', 'admin'), (req, res) => {
 });
 
 router.get('/leaderboard', (_req, res) => {
-  const teams = db.find('teams', t => t.verified === 1)
+  const teams = db.find('teams', t => !HIDDEN_TEAMS.includes(String(t.team_name).toLowerCase()))
     .sort((a, b) => b.points - a.points)
     .map(t => ({ id: t.id, team_name: t.team_name, points: t.points }));
   res.json(teams);
@@ -77,7 +79,6 @@ router.post('/qr', requireAuth, requireRole('superuser', 'admin'), async (req, r
 
   const team = db.get('teams', team_id);
   if (!team) return res.status(404).json({ error: 'Team not found' });
-  if (!team.verified) return res.status(400).json({ error: 'Team not verified' });
 
   const token = crypto.randomBytes(16).toString('hex');
   db.insert('point_tokens', {
