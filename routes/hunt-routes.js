@@ -40,7 +40,14 @@ router.get('/photos/:filename', requireAuth, requireHuntAdmin, async (req, res) 
     const ct = r.headers.get('content-type');
     if (ct) res.set('Content-Type', ct);
     if (!r.body) return res.end();
-    Readable.fromWeb(r.body).pipe(res);
+    const stream = Readable.fromWeb(r.body);
+    // A dropped connection (e.g. hunt server reload) must not crash the whole server.
+    stream.on('error', (err) => {
+      console.error('[HUNT] photo stream error:', err.message);
+      if (!res.headersSent) res.status(502);
+      res.end();
+    });
+    stream.pipe(res);
   } catch (e) {
     res.status(502).json({ error: 'Treasure hunt server unavailable' });
   }
@@ -50,6 +57,24 @@ router.get('/progress', requireAuth, requireHuntAdmin, async (_req, res) => {
   try {
     const r = await huntFetch('/internal/progress');
     res.status(r.status).json(await r.json());
+  } catch (e) {
+    res.status(502).json({ error: 'Treasure hunt server unavailable' });
+  }
+});
+
+router.post('/pass', requireAuth, requireHuntAdmin, async (req, res) => {
+  const team_name = String(req.body.team_name || '').trim();
+  if (!team_name) return res.status(400).json({ error: 'team_name required' });
+  try {
+    const r = await fetch(HUNT_URL + '/internal/pass', {
+      method: 'POST',
+      headers: { 'X-Api-Key': INTERNAL_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team_name, by: req.user.username, image_base64: req.body.image_base64 })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(r.status).json({ error: data.detail || 'Pass failed' });
+    console.log('[HUNT] ' + req.user.username + ' passed clue ' + data.quest_id + ' for "' + team_name + '"');
+    res.json(data);
   } catch (e) {
     res.status(502).json({ error: 'Treasure hunt server unavailable' });
   }

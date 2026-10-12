@@ -20,13 +20,19 @@ for (const name of EVENT_NAMES) {
   }
 }
 
-if (!jdb.findOne('users', u => u.username === 'mohini')) {
+if (!jdb.findOne('users', u => u.username.toLowerCase() === 'mohini')) {
   const hash = bcrypt.hashSync('qwerty', 10);
   jdb.insert('users', { username: 'mohini', password_hash: hash, role: 'superuser', event_scope: null });
 }
 
+// Usernames are lowercase with no spaces (e.g. "Aditya De" -> "adityade").
+for (const u of jdb.all('users')) {
+  const norm = String(u.username).toLowerCase().replace(/\s+/g, '');
+  if (norm !== u.username) jdb.update('users', u.id, { username: norm });
+}
+
 // Mihir is a superuser (created as an admin from the sheet; no event scope).
-const mihir = jdb.findOne('users', u => u.username === 'Mihir');
+const mihir = jdb.findOne('users', u => u.username.toLowerCase() === 'mihir');
 if (mihir && mihir.role !== 'superuser') {
   jdb.update('users', mihir.id, { role: 'superuser', event_scope: null });
 }
@@ -35,4 +41,5 @@ if (mihir && mihir.role !== 'superuser') {
 jdb.updateWhere('teams', t => t.verified !== 1, { verified: 1 });
 
 module.exports = jdb;
+
 

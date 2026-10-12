@@ -367,16 +367,16 @@
       body.innerHTML = rows.map(function (r) {
         var rank = r.rank;
         var cls = rank === 1 ? 'lb-gold' : rank === 2 ? 'lb-silver' : rank === 3 ? 'lb-bronze' : '';
-        return '<tr><td><span class="lb-rank ' + cls + '">' + (rank || '—') + '</span></td>' +
-          '<td>' + esc(r.team_name) + (r.test ? ' <span class="text-dim">(test)</span>' : '') + '</td>' +
-          '<td>' + (r.finished ? '<strong style="color:#4ecb71">Finished</strong>' : 'Clue ' + Math.min(r.progress + 1, r.total) + ' of ' + r.total) + '</td>' +
-          '<td>' + (r.finished ? fmtDuration(r.elapsed_seconds) : '<span class="text-dim">in progress</span>') + '</td>' +
+        var dq = r.disqualified;
+        return '<tr' + (dq ? ' class="lb-dq"' : '') + '><td><span class="lb-rank ' + (dq ? '' : cls) + '">' + (rank || '—') + '</span></td>' +
+          '<td>' + esc(r.team_name) + (dq ? ' <span class="lb-dq-tag">[' + esc(dq) + ']</span>' : '') + '</td>' +
+          '<td>' + (r.finished ? '<strong style="color:#4ecb71">10/10 ✓</strong>' : r.progress + '/' + r.total) + '</td>' +
           '<td>+' + (r.hint_minutes || 0) + 'm <span class="text-dim">(' + (r.hints || 0) + ')</span></td>' +
           '<td>+' + (r.skip_minutes || 0) + 'm <span class="text-dim">(' + (r.skips || 0) + ')</span></td>' +
-          '<td><span class="lb-points">' + (r.finished ? fmtDuration(r.final_seconds) : '—') + '</span></td></tr>';
-      }).join('') || '<tr><td colspan="7" class="text-dim">No team has started yet</td></tr>';
+          '<td><span class="lb-points">' + fmtDuration(r.score_seconds) + '</span></td></tr>';
+      }).join('') || '<tr><td colspan="6" class="text-dim">No team has started yet</td></tr>';
     } catch (e) {
-      body.innerHTML = '<tr><td colspan="7" class="text-dim">Leaderboard unavailable</td></tr>';
+      body.innerHTML = '<tr><td colspan="6" class="text-dim">Leaderboard unavailable</td></tr>';
     }
   }
 
@@ -838,14 +838,18 @@
     var el = document.getElementById('p-sidequest');
     if (!el) return;
     try {
-      var q = await api('GET', '/api/sidequest/current');
-      if (q.completed) {
-        el.innerHTML = '<p class="text-dim">' + esc(q.message || 'No side quests yet. Check back soon!') + '</p>';
+      var list = await api('GET', '/api/sidequest/active');
+      if (!list.length) {
+        el.innerHTML = '<p class="text-dim">No side quests yet. Check back soon!</p>';
         return;
       }
-      var teaser = q.question.length > 90 ? q.question.slice(0, 90) + '…' : q.question;
-      el.innerHTML = '<p><span class="member-badge">' + q.points + ' pts</span> <strong>' + esc(q.title) + '</strong></p>' +
-        '<p class="card-sub" style="margin-top:0.4rem;white-space:pre-line">' + esc(teaser) + '</p>';
+      list = list.filter(function (q) { return !q.staged; }).concat(list.filter(function (q) { return q.staged; }));
+      el.innerHTML = list.map(function (q) {
+        var teaser = q.question.length > 80 ? q.question.slice(0, 80) + '…' : q.question;
+        return '<p style="margin-top:0.4rem"><span class="member-badge">' + q.points + ' pts</span> <strong>' + esc(q.id) + '</strong>' +
+          (q.attempted ? ' <span class="text-dim">(tried)</span>' : '') + '</p>' +
+          '<p class="card-sub" style="white-space:pre-line">' + esc(teaser) + '</p>';
+      }).join('');
     } catch (e) {
       el.innerHTML = '<p class="text-dim">Side Quest unavailable</p>';
     }
@@ -853,7 +857,7 @@
 
   function showSidequestPage() {
     var el = document.getElementById('sq-page');
-    if (el) el.dataset.qid = '';
+    if (el) el.dataset.sig = '';
     loadSidequestPage();
     loadSidequestWinners();
   }
@@ -862,51 +866,66 @@
     var el = document.getElementById('sq-page');
     if (!el) return;
     try {
-      var q = await api('GET', '/api/sidequest/current');
-      if (q.completed) {
-        el.dataset.qid = '';
+      var list = await api('GET', '/api/sidequest/active');
+      if (!list.length) {
+        el.dataset.sig = '';
         el.innerHTML = '<div class="sq-empty"><i class="fas fa-hourglass-half"></i>' +
-          '<h2>' + esc(q.message || 'No side quests yet. Check back soon!') + '</h2>' +
+          '<h2>No side quests yet. Check back soon!</h2>' +
           '<p class="card-sub">A new side quest can drop at any time. This page checks every few seconds.</p></div>';
         return;
       }
-      if (el.dataset.qid === q.id) return; // don't wipe a half-typed answer
-      el.dataset.qid = q.id;
-      var html = '<div class="sq-head"><span class="sq-label">' + esc(q.title) + '</span>' +
-        '<span class="sq-points">+' + q.points + ' pts</span></div>' +
-        '<p class="sq-question">' + esc(q.question) + '</p>';
-      if (!teamData) {
-        html += '<p class="card-sub">Admins can view the live side quest here. Teams answer from their login.</p>';
-      } else if (q.attempted) {
-        html += '<div class="sq-locked"><i class="fas fa-lock"></i> Your team has used its one try on this side quest. Wait for the next one!</div>';
-      } else if (q.answer_method === 'text') {
-        html += '<form id="sq-page-form" class="sq-form" autocomplete="off">' +
-          '<input type="text" name="answer" required placeholder="Type your answer… (one try only!)" />' +
-          '<button type="submit" class="btn"><i class="fas fa-paper-plane"></i> Submit Answer</button></form>';
-      } else {
-        html += '<a href="https://quarks.ug.iisc.ac.in/qr-scanner" target="_blank" rel="noopener" class="btn"><i class="fas fa-camera"></i> Open QR Scanner</a>';
-      }
-      html += '<p class="card-sub" style="margin-top:0.8rem"><i class="fas fa-bolt"></i> First team to solve it wins. Be quick!</p>';
-      el.innerHTML = html;
-      var form = document.getElementById('sq-page-form');
-      if (form) form.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        var btn = form.querySelector('button');
-        if (!confirm('You get ONE try per side quest. Submit this answer?')) return;
-        btn.disabled = true;
-        try {
-          var r = await api('POST', '/api/sidequest/answer', { answer: new FormData(form).get('answer'), quest_id: q.id });
-          toast('Correct! +' + r.points + ' points to your team!', true);
-          showSidequestPage();
-        } catch (err) {
-          toast(err.message);
-          showSidequestPage();
+      // Don't wipe half-typed answers unless the set of quests / attempt states changed.
+      // Latest (queue) quest on top; staged ones below, separated.
+      list = list.filter(function (q) { return !q.staged; }).concat(list.filter(function (q) { return q.staged; }));
+      var sig = list.map(function (q) { return q.id + ':' + (q.attempted ? 1 : 0) + ':' + q.points; }).join('|');
+      if (el.dataset.sig === sig) return;
+      el.dataset.sig = sig;
+      var stagedHeaderDone = false;
+      el.innerHTML = list.map(function (q, i) {
+        var sep = '';
+        if (q.staged && !stagedHeaderDone) {
+          stagedHeaderDone = true;
+          sep = '<div class="sq-staged-sep"><span><i class="fas fa-hourglass-half"></i> Still open: earlier side quest' + (i === 0 ? '' : '') + '</span></div>';
         }
-      });
+        var html = sep + '<div class="sq-card' + (q.staged ? ' sq-card-staged' : '') + '">' +
+          '<div class="sq-head"><span class="sq-label">' + esc(q.title) + ' <small class="text-dim">' + esc(q.id) + '</small></span>' +
+          '<span class="sq-points">+' + q.points + ' pts</span></div>' +
+          (q.round ? '<p class="sq-round"><i class="fas fa-redo"></i> Round ' + q.round + ': everyone got another shot!</p>' : '') +
+          '<p class="sq-question">' + esc(q.question) + '</p>';
+        if (!teamData) {
+          html += '<p class="card-sub">Admins can view live side quests here. Teams answer from their login.</p>';
+        } else if (q.attempted) {
+          html += '<div class="sq-locked"><i class="fas fa-lock"></i> Your team has used its one try on this side quest.</div>';
+        } else if (q.answer_method === 'text') {
+          html += '<form class="sq-form" data-sq-id="' + esc(q.id) + '" autocomplete="off">' +
+            '<input type="text" name="answer" required placeholder="Type your answer… (one try only!)" />' +
+            '<button type="submit" class="btn"><i class="fas fa-paper-plane"></i> Submit Answer</button></form>';
+        } else {
+          html += '<a href="https://quarks.ug.iisc.ac.in/qr-scanner" target="_blank" rel="noopener" class="btn"><i class="fas fa-camera"></i> Open QR Scanner</a>';
+        }
+        return html + '</div>';
+      }).join('') +
+        '<p class="card-sub" style="margin-top:0.8rem"><i class="fas fa-bolt"></i> First team to solve each one wins it. Be quick!</p>';
     } catch (e) {
       el.innerHTML = '<p class="text-dim">Side Quest unavailable</p>';
     }
   }
+
+  document.getElementById('sq-page').addEventListener('submit', async function (e) {
+    var form = e.target.closest('form[data-sq-id]');
+    if (!form) return;
+    e.preventDefault();
+    if (!confirm('You get ONE try per side quest. Submit this answer?')) return;
+    var btn = form.querySelector('button');
+    btn.disabled = true;
+    try {
+      var r = await api('POST', '/api/sidequest/answer', { answer: new FormData(form).get('answer'), quest_id: form.dataset.sqId });
+      toast('Correct! +' + r.points + ' points to your team!', true);
+    } catch (err) {
+      toast(err.message);
+    }
+    showSidequestPage();
+  });
 
   async function loadSidequestWinners() {
     var tbody = document.getElementById('sq-winners');
@@ -932,46 +951,146 @@
     }
   }
 
-  // ---- Side quest drop bell (teams) ----
+  var annAdminCache = [];
+
+  async function loadAnnAdmin() {
+    var el = document.getElementById('ann-admin-list');
+    if (!el) return;
+    try {
+      var list = await api('GET', '/api/announcements');
+      annAdminCache = list;
+      el.innerHTML = list.map(function (a) {
+        return '<div class="bell-item"><i class="fas fa-bullhorn"></i><div style="flex:1;white-space:pre-line">' + esc(a.text) +
+          '<br><span class="text-dim">by ' + esc(a.by || '?') + ' · ' + esc(a.at || '') + (a.edited_by ? ' · edited by ' + esc(a.edited_by) : '') + '</span></div>' +
+          '<button type="button" class="btn btn-compact btn-outline" data-ann-edit="' + esc(a.id) + '"><i class="fas fa-pen"></i></button> ' +
+          '<button type="button" class="btn btn-compact btn-danger" data-ann-del="' + esc(a.id) + '"><i class="fas fa-trash"></i></button></div>';
+      }).join('') || '<p class="text-dim">No notifications</p>';
+    } catch (e) { el.innerHTML = '<p class="text-dim">' + esc(e.message) + '</p>'; }
+  }
+
+  document.getElementById('ann-admin-list').addEventListener('click', async function (e) {
+    var edit = e.target.closest('[data-ann-edit]');
+    if (edit) {
+      var a = annAdminCache.find(function (x) { return x.id === edit.dataset.annEdit; });
+      if (!a) return;
+      var row = edit.closest('.bell-item');
+      row.innerHTML = '<div style="flex:1"><textarea rows="4" maxlength="600" class="ann-edit-text"></textarea>' +
+        '<div style="margin-top:0.4rem"><button type="button" class="btn btn-compact" data-ann-save="' + esc(a.id) + '"><i class="fas fa-save"></i> Save</button> ' +
+        '<button type="button" class="btn btn-compact btn-outline" data-ann-cancel>Cancel</button></div></div>';
+      row.querySelector('.ann-edit-text').value = a.text;
+      return;
+    }
+    if (e.target.closest('[data-ann-cancel]')) { loadAnnAdmin(); return; }
+    var save = e.target.closest('[data-ann-save]');
+    if (save) {
+      var text = save.closest('.bell-item').querySelector('.ann-edit-text').value;
+      if (!confirm('Save changes to this notification for everyone?')) return;
+      try {
+        await api('PUT', '/api/announcements/' + encodeURIComponent(save.dataset.annSave), { text: text });
+        toast('Notification updated', true);
+        loadAnnAdmin(); refreshBell();
+      } catch (err) { toast(err.message); }
+      return;
+    }
+    var btn = e.target.closest('[data-ann-del]');
+    if (!btn) return;
+    if (!confirm('Delete this notification for everyone?')) return;
+    try {
+      await api('DELETE', '/api/announcements/' + encodeURIComponent(btn.dataset.annDel));
+      toast('Notification deleted', true);
+      loadAnnAdmin(); refreshBell();
+    } catch (err) { toast(err.message); }
+  });
+
+  document.getElementById('ann-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    try {
+      await api('POST', '/api/announcements', { text: document.getElementById('ann-input').value });
+      toast('Notification sent to everyone', true);
+      this.reset();
+      loadAnnAdmin(); refreshBell();
+    } catch (err) { toast(err.message); }
+  });
+
+  // ---- Notification bell (everyone): announcements + side quest drops (teams) ----
 
   var bellEl = document.getElementById('nav-bell');
   var bellDot = document.getElementById('nav-bell-dot');
+  var bellText = document.getElementById('nav-bell-text');
+  var bellPanel = document.getElementById('bell-panel');
   var SQ_SEEN_KEY = 'quarks_sq_seen';
+  var ANN_SEEN_KEY = 'quarks_ann_seen';
+  var bellState = { anns: [], sq: null };
 
-  function setBell(on) {
-    bellDot.classList.toggle('is-on', on);
-    bellEl.classList.toggle('is-ringing', on);
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+
+  function newestAnnId() {
+    return bellState.anns.reduce(function (m, a) { return Math.max(m, parseInt(a.id, 10) || 0); }, 0);
   }
 
-  async function checkSidequestDrop() {
-    if (!teamData || user) { bellEl.style.display = 'none'; return; }
-    bellEl.style.display = '';
-    try {
-      var q = await api('GET', '/api/sidequest/current');
-      if (q.completed) { setBell(false); return; }
-      var seen = null;
-      try { seen = localStorage.getItem(SQ_SEEN_KEY); } catch (e) {}
-      if (location.hash === '#sidequest') {
-        try { localStorage.setItem(SQ_SEEN_KEY, q.id); } catch (e) {}
-        setBell(false);
-        return;
-      }
-      if (seen !== q.id && !q.attempted) {
-        if (!bellDot.classList.contains('is-on')) {
-          toast('🔔 New side quest dropped! Tap the bell to play.', true);
-          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-        }
-        setBell(true);
-      } else {
-        setBell(false);
-      }
-    } catch (e) {}
+  function renderBell() {
+    var sq = bellState.sq;
+    var seenAnn = parseInt(lsGet(ANN_SEEN_KEY) || '0', 10) || 0;
+    // Side quest changes announce themselves via a notification on solve; don't ring on admin adds.
+    var newSq = false;
+    var newAnn = newestAnnId() > seenAnn;
+    var ringing = newSq || newAnn;
+    if (ringing && !bellDot.classList.contains('is-on')) {
+      toast(newSq ? '🔔 New side quest dropped! Tap the bell.' : '📢 New notification. Tap the bell.', true);
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+    bellText.textContent = newSq ? 'New Side Quest just Popped up!' : 'New notification! Tap the bell';
+    bellDot.classList.toggle('is-on', ringing);
+    bellEl.classList.toggle('is-ringing', ringing);
+
+    var items = '';
+    (sq || []).forEach(function (q) {
+      items += '<a href="#sidequest" class="bell-item"><i class="fas fa-map-marked-alt"></i><div><strong>Side quest ' + esc(q.id) + ' live</strong> (+' + q.points + ' pts)' +
+        (q.attempted ? '<br><span class="text-dim">You used your try on this one</span>' : '<br><span class="text-dim">Tap to open</span>') + '</div></a>';
+    });
+    bellState.anns.forEach(function (a) {
+      var isNew = (parseInt(a.id, 10) || 0) > seenAnn;
+      items += '<div class="bell-item' + (isNew ? ' is-new' : '') + '"><i class="fas fa-bullhorn"></i><div style="white-space:pre-line">' + esc(a.text) +
+        '<br><span class="text-dim">' + esc(a.at || '') + '</span></div></div>';
+    });
+    document.getElementById('bell-items').innerHTML = items || '<p class="text-dim">No notifications</p>';
   }
 
-  bellEl.addEventListener('click', function () { setBell(false); });
-  window.addEventListener('hashchange', checkSidequestDrop);
-  setInterval(checkSidequestDrop, 10000);
-  setTimeout(checkSidequestDrop, 1500);
+  async function refreshBell() {
+    try { bellState.anns = await api('GET', '/api/announcements'); } catch (e) {}
+    if (teamData && !user) {
+      try {
+        var act = await api('GET', '/api/sidequest/active');
+        act = act.filter(function (q) { return !q.staged; }).concat(act.filter(function (q) { return q.staged; }));
+        bellState.sq = act.length ? act : null;
+      } catch (e) { bellState.sq = null; }
+    } else {
+      bellState.sq = null;
+    }
+
+    renderBell();
+  }
+
+  bellEl.addEventListener('click', function (e) {
+    e.preventDefault();
+    var open = bellPanel.style.display === 'none';
+    bellPanel.style.display = open ? '' : 'none';
+    if (open) {
+      // Opening the panel marks everything as seen.
+      lsSet(ANN_SEEN_KEY, String(newestAnnId()));
+
+      renderBell();
+    }
+  });
+  document.getElementById('bell-panel-close').addEventListener('click', function () { bellPanel.style.display = 'none'; });
+  document.getElementById('bell-items').addEventListener('click', function (e) {
+    if (e.target.closest('a')) bellPanel.style.display = 'none';
+  });
+
+  window.addEventListener('hashchange', refreshBell);
+  setInterval(refreshBell, 10000);
+  setTimeout(refreshBell, 1200);
 
   // Keep the participant's side quest fresh so teams see when it's been taken.
   setInterval(function () {
@@ -990,6 +1109,8 @@
         var color = q.status === 'active' ? '#4ecb71' : q.status === 'solved' ? '#8a8780' : q.status === 'needs answer' ? '#e06c6c' : '';
         var actions = q.status === 'solved' ? '' :
           '<button type="button" class="btn btn-compact btn-outline" data-sq-edit="' + esc(q.id) + '">Edit answer</button> ' +
+          '<button type="button" class="btn btn-compact btn-outline" data-sq-pts="' + esc(q.id) + '">Points</button> ' +
+          '<button type="button" class="btn btn-compact btn-outline" data-sq-stage="' + esc(q.id) + '" data-staged="' + (q.staged ? 1 : 0) + '">' + (q.staged ? 'Unstage' : 'Stage') + '</button> ' +
           '<button type="button" class="btn btn-compact btn-danger" data-sq-del="' + esc(q.id) + '"><i class="fas fa-trash"></i></button>';
         return '<tr><td>' + esc(q.id) + '</td>' +
           '<td style="color:' + color + ';font-weight:600">' + esc(q.status) + '</td>' +
@@ -1009,8 +1130,20 @@
   document.getElementById('sq-admin-list').addEventListener('click', async function (e) {
     var edit = e.target.closest('[data-sq-edit]');
     var del = e.target.closest('[data-sq-del]');
+    var pts = e.target.closest('[data-sq-pts]');
+    var stage = e.target.closest('[data-sq-stage]');
     try {
-      if (edit) {
+      if (pts) {
+        var np = prompt('New points for ' + pts.dataset.sqPts + ':');
+        if (!np) return;
+        await api('PUT', '/api/sidequest/admin/' + encodeURIComponent(pts.dataset.sqPts), { points: np });
+        toast('Points updated', true);
+      } else if (stage) {
+        var on = stage.dataset.staged !== '1';
+        if (!confirm(on ? 'Stage ' + stage.dataset.sqStage + '? It stays open for attempts and the NEXT quest goes live too.' : 'Unstage ' + stage.dataset.sqStage + '? It returns to normal queue order.')) return;
+        await api('PUT', '/api/sidequest/admin/' + encodeURIComponent(stage.dataset.sqStage), { staged: on });
+        toast(on ? 'Staged: next quest is live too' : 'Unstaged', true);
+      } else if (edit) {
         var ans = prompt('New answer(s) for ' + edit.dataset.sqEdit + ' (comma separated):');
         if (!ans) return;
         await api('PUT', '/api/sidequest/admin/' + encodeURIComponent(edit.dataset.sqEdit), { answer: ans });
@@ -1064,7 +1197,7 @@
             var src = '/api/hunt/photos/' + encodeURIComponent(p.filename);
             return '<a class="photo-item" href="' + src + '" target="_blank" rel="noopener">' +
               '<img src="' + src + '" alt="" loading="lazy" />' +
-              '<span>' + esc(p.quest_title || p.quest_id || '') + '</span>' +
+              '<span>' + esc(p.quest_title || p.quest_id || '') + (p.admin_pass_by ? ' <em class="text-dim">(passed by ' + esc(p.admin_pass_by) + ')</em>' : '') + '</span>' +
               '<span class="text-dim">' + esc(p.uploaded_at || '') + '</span></a>';
           }).join('') + '</div></div>';
       }).join('') || '<p class="text-dim">No photos uploaded yet</p>';
@@ -1103,12 +1236,72 @@
           '<td>' + r.hints + '</td><td>' + r.skips + '</td>' +
           '<td>+' + r.penalty_minutes + 'm</td>' +
           '<td>' + fmtClock(r.last_activity) + '</td>' +
-          '<td><strong>' + fmtDuration(r.final_seconds) + '</strong></td></tr>';
-      }).join('') || '<tr><td colspan="9" class="text-dim">No teams have opened the hunt yet</td></tr>';
+          '<td><strong>' + fmtDuration(r.final_seconds) + '</strong></td>' +
+          '<td>' + (r.finished ? (r.passes ? '<span class="text-dim">' + r.passes + ' pass' + (r.passes > 1 ? 'es' : '') + '</span>' : '') :
+            '<button type="button" class="btn btn-compact btn-outline" data-hunt-pass="' + esc(r.team_name) + '" data-hunt-loc="' + esc(r.current_location || '') + '">Pass Team</button>' +
+            (r.passes ? '<br><span class="text-dim">' + r.passes + ' used</span>' : '')) + '</td></tr>';
+      }).join('') || '<tr><td colspan="10" class="text-dim">No teams have opened the hunt yet</td></tr>';
     } catch (err) {
-      tbody.innerHTML = '<tr><td colspan="9">' + esc(err.message) + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10">' + esc(err.message) + '</td></tr>';
     }
   }
+
+  var passOverlay = document.getElementById('hunt-pass-overlay');
+  var passTeam = null;
+
+  document.getElementById('hunt-progress-body').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-hunt-pass]');
+    if (!btn) return;
+    passTeam = btn.dataset.huntPass;
+    document.getElementById('hunt-pass-info').textContent =
+      'Team "' + passTeam + '", current clue: ' + (btn.dataset.huntLoc || '?') + '. Use only if they reached the spot but could not scan.';
+    document.getElementById('hunt-pass-form').reset();
+    document.getElementById('hunt-pass-preview').style.display = 'none';
+    passOverlay.style.display = 'flex';
+  });
+
+  document.getElementById('hunt-pass-close').addEventListener('click', function () { passOverlay.style.display = 'none'; });
+
+  document.getElementById('hunt-pass-file').addEventListener('change', function () {
+    var img = document.getElementById('hunt-pass-preview');
+    if (this.files && this.files[0]) { img.src = URL.createObjectURL(this.files[0]); img.style.display = 'block'; }
+  });
+
+  // Shrink the screenshot to a reasonable JPEG before sending.
+  function fileToJpegBase64(file) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        var scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  document.getElementById('hunt-pass-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var file = document.getElementById('hunt-pass-file').files[0];
+    if (!file || !passTeam) return;
+    if (!confirm('Pass the current clue for "' + passTeam + '"? No penalty is added.')) return;
+    var btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      var b64 = await fileToJpegBase64(file);
+      var r = await api('POST', '/api/hunt/pass', { team_name: passTeam, image_base64: b64 });
+      toast('Clue passed for ' + passTeam + (r.completed ? ': they finished the hunt!' : ''), true);
+      passOverlay.style.display = 'none';
+      loadHuntProgress();
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   document.getElementById('refresh-hunt-progress').addEventListener('click', loadHuntProgress);
   setInterval(function () {
@@ -1150,6 +1343,7 @@
       if (tab.dataset.tab === 'admin-photos') loadHuntPhotos();
       if (tab.dataset.tab === 'admin-hunt-progress') loadHuntProgress();
       if (tab.dataset.tab === 'admin-sidequests') loadSidequestAdmin();
+      if (tab.dataset.tab === 'admin-announce') loadAnnAdmin();
     });
   });
 
@@ -1715,9 +1909,91 @@
     updateNav();
   }
 
+  // ---- Auto-update: reload open pages when the UI is updated (but not mid-typing) ----
+
+  var uiVersion = null;
+  setInterval(async function () {
+    try {
+      var r = await api('GET', '/api/version');
+      if (uiVersion === null) { uiVersion = r.v; return; }
+      if (r.v !== uiVersion) {
+        var a = document.activeElement;
+        var typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && a.value;
+        if (!typing) location.reload();
+      }
+    } catch (e) {}
+  }, 30000);
+
+  // ---- Event over: winner card + flowing confetti ----
+
+  var confettiRunning = false;
+  function startConfetti() {
+    if (confettiRunning) return;
+    confettiRunning = true;
+    var canvas = document.getElementById('confetti-canvas');
+    var ctx = canvas.getContext('2d');
+    var colors = ['#ffc93c', '#ff6b6b', '#4ecb71', '#4dabf7', '#cc5de8', '#ffffff', '#f783ac'];
+    var pieces = [];
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+    function spawn(initial) {
+      return {
+        x: Math.random() * canvas.width,
+        y: initial ? Math.random() * canvas.height : -20 - Math.random() * 100,
+        w: 6 + Math.random() * 6, h: 8 + Math.random() * 8,
+        vy: 1.2 + Math.random() * 2.2, vx: -0.8 + Math.random() * 1.6,
+        rot: Math.random() * Math.PI, vr: -0.08 + Math.random() * 0.16,
+        sway: Math.random() * Math.PI * 2,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      };
+    }
+    var count = window.innerWidth < 600 ? 90 : 160;
+    for (var i = 0; i < count; i++) pieces.push(spawn(true));
+    function frame() {
+      var onHome = document.getElementById('view-home').classList.contains('is-active');
+      canvas.style.display = onHome ? '' : 'none';
+      if (onHome) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        pieces.forEach(function (p, idx) {
+          p.sway += 0.03;
+          p.x += p.vx + Math.sin(p.sway) * 0.6;
+          p.y += p.vy;
+          p.rot += p.vr;
+          if (p.y > canvas.height + 20) pieces[idx] = spawn(false);
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.sway)) + 2);
+          ctx.restore();
+        });
+      }
+      requestAnimationFrame(frame);
+    }
+    frame();
+  }
+
+  async function loadEventStatus() {
+    try {
+      var st = await api('GET', '/api/event-status');
+      if (!st.over) return;
+      document.body.classList.add('event-over');
+      var card = document.getElementById('winner-card');
+      if (st.winner) {
+        document.getElementById('winner-name').textContent = st.winner;
+        document.getElementById('winner-members').textContent = (st.members || []).join(' · ');
+        document.getElementById('winner-points').textContent = st.points != null ? st.points + ' points' : '';
+      }
+      card.style.display = '';
+      startConfetti();
+    } catch (e) {}
+  }
+
   // ---- Init ----
 
   async function init() {
+    loadEventStatus();
     await checkAuth();
     if (isLive) goLive();
     startCountdown();

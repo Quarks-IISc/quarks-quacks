@@ -15,10 +15,14 @@
   <!-- NAV -->
   <nav class="nav" id="nav">
     <a href="#home" class="nav-brand">Quarks <span>Quacks</span></a>
-    <a href="#sidequest" class="nav-bell" id="nav-bell" title="Side quest alerts" style="display:none">
-      <span class="nav-bell-marquee"><span class="nav-bell-text">New Side Quest just Popped up!</span></span>
+    <a href="#" class="nav-bell" id="nav-bell" title="Notifications">
+      <span class="nav-bell-marquee"><span class="nav-bell-text" id="nav-bell-text">New Side Quest just Popped up!</span></span>
       <i class="fas fa-bell"></i><span class="nav-bell-dot" id="nav-bell-dot"></span>
     </a>
+    <div class="bell-panel" id="bell-panel" style="display:none">
+      <div class="bell-panel-head">Notifications <button type="button" class="ann-close" id="bell-panel-close" aria-label="Close">&times;</button></div>
+      <div id="bell-items"><p class="text-dim">No notifications</p></div>
+    </div>
     <button class="nav-toggle" id="nav-toggle" aria-label="Menu"><i class="fas fa-bars"></i></button>
     <div class="nav-links" id="nav-links">
       <a href="#home" data-nav="home"><i class="fas fa-home"></i> Home</a>
@@ -74,6 +78,16 @@
           </a>
         </div>
 
+        <!-- Grand prize winner (shown when the event is over) -->
+        <div class="winner-card" id="winner-card" style="display:none">
+          <div class="winner-trophy"><i class="fas fa-trophy"></i></div>
+          <p class="winner-kicker">Quarks Quacks 2026 · Grand Prize Winner</p>
+          <h1 class="winner-name" id="winner-name">—</h1>
+          <p class="winner-members" id="winner-members"></p>
+          <p class="winner-points" id="winner-points"></p>
+          <p class="winner-thanks">Thank you all for quacking with us! Points, side quests and the treasure hunt are now closed. 🦆</p>
+        </div>
+
         <!-- Handbook -->
         <div class="handbook-section">
           <h3 class="handbook-heading">Rules &amp; Handbook</h3>
@@ -104,7 +118,7 @@
                 <li>10 problems: the <strong>first 5 come in a random order</strong> for each team, and the <strong>last 5 are in a fixed order</strong>.</li>
                 <li><strong>Upload your team picture</strong> at every location for verification. If you don't, you will be <strong>disqualified</strong>.</li>
                 <li>If you start late, <strong>no compensation</strong> will be given.</li>
-                <li>Closes at <strong>1:00 PM sharp</strong>.</li>
+                <li>Closes at <strong>1:30 PM sharp</strong>.</li>
               </ul>
             </div>
           </div>
@@ -204,9 +218,9 @@
           <div class="card card-wide">
             <div class="table-wrap">
               <table>
-                <thead><tr><th>#</th><th>Team</th><th>Problem</th><th>Time Taken</th><th>Hint Delay</th><th>Skip Delay</th><th>Final Time</th></tr></thead>
+                <thead><tr><th>#</th><th>Team</th><th>Clues</th><th>Hint Delay</th><th>Skip Delay</th><th>Final Time</th></tr></thead>
                 <tbody id="th-lb-body">
-                  <tr><td colspan="7" class="text-dim">Loading…</td></tr>
+                  <tr><td colspan="6" class="text-dim">Loading…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -453,6 +467,7 @@
           <button class="su-tab" data-tab="admin-teams">Teams</button>
           <button class="su-tab su-only" data-tab="admin-manage" style="display:none">Manage Admins</button>
           <button class="su-tab su-only" data-tab="admin-register" style="display:none">Register Team</button>
+          <button class="su-tab" data-tab="admin-announce">Notifications</button>
           <button class="su-tab" data-tab="admin-sidequests">Side Quests</button>
           <button class="su-tab th-only" data-tab="admin-hunt-progress" style="display:none">Hunt Progress</button>
           <button class="su-tab th-only" data-tab="admin-photos" style="display:none">Team Photos</button>
@@ -592,7 +607,7 @@
             <button type="button" class="btn btn-compact" id="refresh-hunt-progress" style="margin-bottom:0.8rem"><i class="fas fa-sync"></i> Refresh</button>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>#</th><th>Team</th><th>Progress</th><th>Now at</th><th>Hints</th><th>Skips</th><th>Penalty</th><th>Last scan</th><th>Final time</th></tr></thead>
+                <thead><tr><th>#</th><th>Team</th><th>Progress</th><th>Now at</th><th>Hints</th><th>Skips</th><th>Penalty</th><th>Last scan</th><th>Final time</th><th></th></tr></thead>
                 <tbody id="hunt-progress-body"></tbody>
               </table>
             </div>
@@ -604,6 +619,22 @@
             <h2><i class="fas fa-camera"></i> Team Photos</h2>
             <button type="button" class="btn btn-compact" id="refresh-photos" style="margin-bottom:0.8rem"><i class="fas fa-sync"></i> Refresh</button>
             <div id="admin-photos-container"><p class="text-dim">Loading…</p></div>
+          </div>
+        </div>
+
+        <!-- Notifications tab (all admins + superuser) -->
+        <div class="su-panel" id="admin-announce" style="display:none">
+          <div class="card">
+            <h2><i class="fas fa-bell"></i> Send a Notification</h2>
+            <p class="card-sub">Goes into everyone's bell (teams and visitors). Their bell rings within ~10s.</p>
+            <form id="ann-form">
+              <textarea name="text" id="ann-input" rows="4" maxlength="600" required placeholder="e.g. Side quest S2 is still up for grabs!"></textarea>
+              <button type="submit" class="btn btn-compact" style="margin-top:0.6rem"><i class="fas fa-paper-plane"></i> Send</button>
+            </form>
+          </div>
+          <div class="card card-wide">
+            <h2><i class="fas fa-list"></i> Live Notifications</h2>
+            <div id="ann-admin-list"><p class="text-dim">Loading…</p></div>
           </div>
         </div>
 
@@ -660,6 +691,23 @@
         </div>
       </div>
     </section>
+
+  <!-- Pass Team overlay (TH admins + superuser) -->
+  <div class="overlay" id="hunt-pass-overlay" style="display:none">
+    <div class="overlay-content">
+      <button class="overlay-close" id="hunt-pass-close">&times;</button>
+      <h2><i class="fas fa-forward"></i> Pass Team</h2>
+      <p class="card-sub" id="hunt-pass-info"></p>
+      <form id="hunt-pass-form">
+        <label>Screenshot / photo from the team (proof they're at the spot) *
+          <input type="file" id="hunt-pass-file" accept="image/*" required />
+        </label>
+        <img id="hunt-pass-preview" alt="" style="display:none;max-width:100%;margin-top:0.6rem;border-radius:6px" />
+        <p class="card-sub" style="margin-top:0.6rem">Completes their current clue with no penalty. The screenshot is saved in Team Photos.</p>
+        <button type="submit" class="btn" style="margin-top:0.6rem"><i class="fas fa-check"></i> Pass Team</button>
+      </form>
+    </div>
+  </div>
 
   <!-- Team Detail Overlay (superuser only) -->
   <div class="overlay" id="team-detail-overlay" style="display:none">
@@ -753,6 +801,7 @@
     });
   })();
   </script>
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
   <script src="app.js"></script>
 </body>
 </html>

@@ -4,28 +4,17 @@
     "original_order": 1,
     "answer_method": "text",
     "title": "Side Quest",
-    "location": "Sarvam - 1st item on blackboard",
-    "question": "At the counter that draws a crowd even at 4 AM,\nHangs a handwritten list of midnight cravings.\nTo unlock your path, enter the very first item at the top",
-    "answer": [
-      "__FILL_IN_ANSWER__"
-    ],
-    "points": 100
-  },
-  {
-    "id": "S2",
-    "original_order": 2,
-    "answer_method": "text",
-    "title": "Side Quest",
     "location": "The 4 Trees",
     "question": "The older they get the more they lean\nBut the familial bonds never die.\nFind the FAMILY of four,\nnear the start of IISC's glory.",
     "answer": [
       "ARAUCARIACEAE"
     ],
-    "points": 100
+    "points": 100,
+    "uid": "0c7a03cee504"
   },
   {
-    "id": "S3",
-    "original_order": 3,
+    "id": "S2",
+    "original_order": 2,
     "answer_method": "text",
     "title": "Side Quest",
     "location": "The Stone Walkway Pillars",
@@ -33,42 +22,112 @@
     "answer": [
       "1190"
     ],
-    "points": 100
+    "points": 100,
+    "uid": "1894eef173e4"
+  },
+  {
+    "id": "S3",
+    "original_order": 3,
+    "answer_method": "text",
+    "title": "Side Quest",
+    "location": "The Fishes at the entrance of Nesara",
+    "question": "A place of eateries that has REOPENED,\nHouses little swimmers at its ingress.\nHow many, I wonder?",
+    "answer": [
+      "8"
+    ],
+    "points": 100,
+    "uid": "1b00482be8ee"
   },
   {
     "id": "S4",
     "original_order": 4,
     "answer_method": "text",
     "title": "Side Quest",
-    "location": "The Fishes at the entrance of Nesara",
-    "question": "A place of eateries that has REOPENED,\nHouses little swimmers at its ingress.\nHow many, I wonder?",
-    "answer": [
-      "__FILL_IN_ANSWER__"
-    ],
-    "points": 100
-  },
-  {
-    "id": "S5",
-    "original_order": 5,
-    "answer_method": "text",
-    "title": "Side Quest",
     "location": "The Duck at the entrance of OPB",
     "question": "As you enter today's crowded venue by the entrance that isn't considered main, you will find the mascot greeting you and hiding something behind his back. What could it be?!",
     "answer": [
-      "__FILL_IN_ANSWER__"
+      "spark"
     ],
-    "points": 100
+    "points": 100,
+    "uid": "fe568c8b6052"
   },
   {
     "id": "S6",
+    "uid": "72231a69a725",
     "original_order": 6,
     "answer_method": "text",
     "title": "Side Quest",
-    "location": "The Chemical Science Tree",
-    "question": "Where chemists moved in before the scaffolding came down, a green resident stayed behind and took root indoors. It has one reaction, and it is slow. Beneath the glass sky, search where it drinks.",
+    "question": "A lone neuron sits at the centre on some grass, while its copies hold a vigil around it. Join their positions with a line and tell me what shape their devotion draws.",
     "answer": [
-      "__FILL_IN_ANSWER__"
+      "pentagon"
     ],
-    "points": 100
+    "points": 100,
+    "added_by": "parth"
+  },
+  {
+    "id": "S7",
+    "uid": "abbecf8b17e9",
+    "original_order": 7,
+    "answer_method": "text",
+    "title": "Side quest",
+    "question": "Its wings are clipped, yet it still stands watch over those who dream of flight. Find the one who hunts like a hawk, and bring back its SR number.",
+    "answer": [
+      "A467"
+    ],
+    "points": 100,
+    "added_by": "parth"
+  },
+  {
+    "id": "S8",
+    "uid": "f4adbe9909f6",
+    "original_order": 8,
+    "answer_method": "text",
+    "title": "Side quest",
+    "question": "Where minds are the specimen, a lone green thing on a throne counts its square courtiers each dawn. Envy has made it precise. Be as precise as it is, and bring back the count.",
+    "answer": [
+      "24"
+    ],
+    "points": 100,
+    "added_by": "parth"
+  },
+  {
+    "id": "S9",
+    "uid": "ea6b957dab0d",
+    "original_order": 9,
+    "answer_method": "text",
+    "title": "Side quest",
+    "question": "A prominent DRDO scientist once visited a centre where technologies of high temperature molecules were exhibited. He planted a plant near, and now its your chance to find out the plant's name, before it dissapears.",
+    "answer": [
+      "Amrapali Mango"
+    ],
+    "points": 100,
+    "added_by": "parth"
+  },
+  {
+    "id": "S10",
+    "uid": "354061c6d027",
+    "original_order": 10,
+    "answer_method": "text",
+    "title": "Side quests",
+    "question": "Caution!! Work in progress..",
+    "answer": [
+      "Drake"
+    ],
+    "points": 100,
+    "added_by": "sahana",
+    "staged": true
+  },
+  {
+    "id": "S11",
+    "uid": "db7614825fbc",
+    "original_order": 11,
+    "answer_method": "text",
+    "title": "Side quest",
+    "question": "Victory you gain on the big red tower, Step on to the blue tiles of Alhambra.",
+    "answer": [
+      "Azul"
+    ],
+    "points": 100,
+    "added_by": "sahana"
   }
 ]

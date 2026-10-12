@@ -8,7 +8,8 @@ const router = express.Router();
 router.use(requireAuth, requireRole('superuser'));
 
 router.post('/', (req, res) => {
-  const { username, password, event_scope } = req.body;
+  const { password, event_scope } = req.body;
+  const username = String(req.body.username || '').toLowerCase().replace(/\s+/g, '');
   if (!username || !password || !event_scope) {
     return res.status(400).json({ error: 'username, password, and event_scope required' });
   }
@@ -18,7 +19,7 @@ router.post('/', (req, res) => {
     if (!db.get('events', id)) return res.status(400).json({ error: 'Invalid event id: ' + id });
   }
 
-  const exists = db.findOne('users', u => u.username === username);
+  const exists = db.findOne('users', u => u.username.toLowerCase() === username);
   if (exists) return res.status(409).json({ error: 'Username already taken' });
 
   const hash = bcrypt.hashSync(password, 10);

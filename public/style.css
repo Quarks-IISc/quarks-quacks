@@ -1481,9 +1481,8 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 .nav-bell-dot.is-on { display: block; }
 .nav-bell.is-ringing i { color: var(--accent); animation: bell-ring 1.2s ease-in-out infinite; transform-origin: 50% 0; }
 @keyframes bell-ring { 0%,60%,100% { transform: rotate(0); } 10% { transform: rotate(18deg); } 20% { transform: rotate(-16deg); } 30% { transform: rotate(12deg); } 40% { transform: rotate(-8deg); } 50% { transform: rotate(4deg); } }
-/* When the bell is visible it takes the auto margin; keep links/toggle next to it. */
-.nav-bell:not([style*="none"]) ~ .nav-links,
-.nav-bell:not([style*="none"]) ~ .nav-toggle { margin-left: 0; }
+/* The bell takes the auto margin; keep links/toggle next to it. */
+.nav-bell ~ .nav-links, .nav-bell ~ .nav-toggle { margin-left: 0; }
 
 /* Scrolling "new side quest" text beside the bell (only while ringing) */
 .nav-bell-marquee { display: none; overflow: hidden; width: 230px; max-width: 45vw; font-size: 0.85rem; font-weight: 700; color: var(--accent); white-space: nowrap; }
@@ -1496,3 +1495,40 @@ tbody tr:hover { background: rgba(255,255,255,0.02); }
 }
 
 .login-error { margin: 0.6rem 0; padding: 0.7rem 0.9rem; border: 1px solid #e06c6c; background: rgba(224,108,108,0.12); color: #f0a0a0; border-radius: 6px; font-size: 0.9rem; line-height: 1.4; }
+
+/* ---- Announcement banner ---- */
+.ann-banner { position: sticky; top: 0; z-index: 250; display: flex; align-items: flex-start; gap: 0.7rem; padding: 0.7rem 1rem; background: var(--accent); color: #151515; font-weight: 600; font-size: 0.92rem; line-height: 1.45; }
+.ann-banner i { margin-top: 0.2rem; }
+.ann-banner span { flex: 1; }
+.ann-close { background: none; border: none; font-size: 1.4rem; line-height: 1; cursor: pointer; color: #151515; padding: 0 0.2rem; }
+
+/* ---- Bell panel ---- */
+.bell-panel { position: fixed; top: 3.6rem; right: 0.8rem; width: min(360px, calc(100vw - 1.6rem)); max-height: 70vh; overflow-y: auto; z-index: 300; background: var(--card, #1d1d1d); border: 1px solid var(--accent); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.45); padding: 0.6rem; }
+.bell-panel-head { display: flex; justify-content: space-between; align-items: center; font-weight: 700; padding: 0.2rem 0.4rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0.4rem; }
+.bell-panel .ann-close { color: var(--text); }
+.bell-item { display: flex; gap: 0.7rem; padding: 0.6rem 0.5rem; border-radius: 6px; color: var(--text); text-decoration: none; line-height: 1.45; font-size: 0.9rem; }
+.bell-item i { color: var(--accent); margin-top: 0.2rem; }
+.bell-item.is-new { background: rgba(255, 201, 60, 0.1); }
+a.bell-item:hover { background: rgba(255,255,255,0.06); }
+
+.sq-card + .sq-card { margin-top: 1.4rem; padding-top: 1.2rem; border-top: 1px dashed rgba(255,255,255,0.15); }
+.sq-staged-sep { margin: 3rem 0 1.2rem; border-top: 2px dashed rgba(255,255,255,0.18); text-align: center; }
+.sq-staged-sep span { position: relative; top: -0.75rem; padding: 0 0.8rem; background: var(--card, #1d1d1d); color: var(--text-dim); font-size: 0.85rem; }
+.sq-card-staged { opacity: 0.9; }
+.sq-staged-sep + .sq-card { border-top: none; margin-top: 0; padding-top: 0; }
+.sq-round { color: var(--accent); font-weight: 700; margin: -0.4rem 0 0.4rem; }
+
+.lb-dq td { text-decoration: line-through; opacity: 0.55; }
+.lb-dq-tag { display: inline-block; text-decoration: none; color: #e06c6c; font-weight: 700; }
+
+/* ---- Grand prize winner + confetti ---- */
+#confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 150; }
+.winner-card { position: relative; z-index: 151; text-align: center; margin: 1.2rem auto 2rem; max-width: 720px; padding: 1.6rem 1.2rem 1.4rem;
+  border: 2px solid var(--accent); border-radius: 10px; background: var(--card, rgba(255,255,255,0.03)); }
+.winner-trophy { font-size: 2.6rem; color: var(--accent); }
+.winner-kicker { font-family: 'Caveat', cursive; font-size: 1.4rem; color: var(--accent); margin-top: 0.2rem; }
+.winner-name { font-family: 'Playfair Display', serif; font-size: clamp(2.2rem, 8vw, 3.6rem); margin: 0.2rem 0; line-height: 1.1; color: var(--text); }
+.winner-members { color: var(--text); opacity: 0.85; margin-top: 0.3rem; }
+.winner-points { font-weight: 700; color: var(--accent); margin-top: 0.4rem; font-size: 1.05rem; }
+.winner-thanks { margin-top: 1rem; font-size: 0.9rem; opacity: 0.8; }
+body.event-over .countdown, body.event-over #home-cta { display: none !important; }

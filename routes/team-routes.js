@@ -12,7 +12,8 @@ function generateOtp() {
 }
 
 router.post('/', (req, res) => {
-  const { team_name, password, members } = req.body;
+  const { password, members } = req.body;
+  const team_name = String(req.body.team_name || '').trim();
   if (!team_name || !password || !Array.isArray(members) || members.length < 1 || members.length > 3) {
     return res.status(400).json({ error: 'team_name, password, and 1-3 members required' });
   }
@@ -24,7 +25,7 @@ router.post('/', (req, res) => {
   const captain = members.find(m => m.is_captain) || members.find(m => m.email) || members[0];
   if (!captain.email) return res.status(400).json({ error: 'Point of Contact must have an email' });
 
-  const exists = db.findOne('teams', t => t.team_name.toLowerCase() === String(team_name).trim().toLowerCase());
+  const exists = db.findOne('teams', t => String(t.team_name).trim().toLowerCase() === String(team_name).trim().toLowerCase());
   if (exists) return res.status(409).json({ error: 'Team name already taken' });
 
   const passwordHash = bcrypt.hashSync(password, 10);
@@ -85,7 +86,8 @@ router.post('/login', (req, res) => {
   const password = String(req.body.password || '');
   if (!team_name || !password) return res.status(400).json({ error: 'Team name and password required' });
 
-  const team = db.findOne('teams', t => t.team_name.toLowerCase() === team_name.toLowerCase());
+  // Compare trimmed: some teams registered with stray spaces in their name.
+  const team = db.findOne('teams', t => String(t.team_name).trim().toLowerCase() === team_name.toLowerCase());
   if (!team) return res.status(404).json({ error: 'Team not found' });
   if (!team.password_hash || !(bcrypt.compareSync(password, team.password_hash) || bcrypt.compareSync(password.trim(), team.password_hash))) {
     return res.status(401).json({ error: 'Incorrect password' });
