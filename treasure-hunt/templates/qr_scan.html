@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}QR Clue{% endblock %}
+{% block content %}
+<div class="card">
+    <p class="text-dim" style="margin-bottom:0.3rem"><i class="fas fa-users"></i> Team: <strong class="text-accent">{{ team_name }}</strong></p>
+    <h2><i class="fas fa-qrcode" style="color:var(--secondary)"></i> {{ title }}</h2>
+    <p style="margin-top:0.5rem">You found the right spot! Take a team photo here and upload it to complete this clue.</p>
+    <form action="{{ base }}/answer/q/{{ token }}" method="post" enctype="multipart/form-data" style="margin-top:1rem" id="photo-form">
+        <label for="photo">Team Photo</label>
+        <input id="photo" name="photo" type="file" accept="image/*" capture="environment" required>
+        <img id="preview" alt="" style="display:none;max-width:100%;margin-top:0.8rem;border-radius:8px">
+        <button type="submit" class="btn" style="width:100%;justify-content:center;margin-top:1rem" id="submit-btn">
+            <i class="fas fa-upload"></i> Upload Photo &amp; Complete Clue
+        </button>
+    </form>
+</div>
+<a class="back-link" href="{{ base }}/dashboard"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+<script>
+document.getElementById('photo').addEventListener('change', function() {
+    var img = document.getElementById('preview');
+    if (this.files && this.files[0]) {
+        img.src = URL.createObjectURL(this.files[0]);
+        img.style.display = 'block';
+    }
+});
+document.getElementById('photo-form').addEventListener('submit', function() {
+    var btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+});
+</script>
+{% endblock %}

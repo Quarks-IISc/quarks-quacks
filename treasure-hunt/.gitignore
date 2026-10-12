@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+
+# Environment variables / secrets
+.env
+
+# Local game state
+data/teams.json
+data/game_state.json
+data/photos/
+/data/qr_failed

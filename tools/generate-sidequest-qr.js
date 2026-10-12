@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const QRCode = require('qrcode');
 
-const BASE = (process.env.SQ_BASE_URL || 'http://10.134.10.33:3001').replace(/\/+$/, '');
+const BASE = (process.env.SQ_BASE_URL || 'http://localhost:3001').replace(/\/+$/, '');
 const CONFIG = path.join(__dirname, '..', 'sidequests.json');
 const OUT_DIR = path.join(__dirname, '..', 'sq-qr');
 

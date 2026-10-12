@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Clue Completed{% endblock %}
+{% block content %}
+<div class="card">
+    <h2><i class="fas fa-check-circle" style="color:var(--success)"></i> Clue Completed!</h2>
+    <p style="margin-top:0.5rem">{{ message }}</p>
+</div>
+
+{% if completed %}
+<div class="alert alert-success">
+    <i class="fas fa-trophy"></i> Congratulations! You have completed the Main Quest!
+</div>
+{% else %}
+<p class="text-dim" style="margin-top:0.8rem">Returning to dashboard...</p>
+{% endif %}
+
+<a class="btn btn-secondary" href="{{ base }}/dashboard" style="margin-top:0.8rem"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+<script>
+setTimeout(function() { window.location.href = '{{ base }}/dashboard'; }, 2000);
+</script>
+{% endblock %}

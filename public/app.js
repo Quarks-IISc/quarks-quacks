@@ -344,12 +344,13 @@
       var body = document.getElementById('home-lb-body');
       body.innerHTML = teams.map(function (t, i) {
         var rank = i + 1;
-        var cls = rank === 1 ? 'lb-gold' : rank === 2 ? 'lb-silver' : rank === 3 ? 'lb-bronze' : '';
-        var icon = rank === 1 ? '<i class="fas fa-trophy"></i> ' : rank === 2 ? '<i class="fas fa-medal"></i> ' : rank === 3 ? '<i class="fas fa-award"></i> ' : '';
-        return '<tr><td><span class="lb-rank ' + cls + '">' + icon + rank + '</span></td>' +
-          '<td>' + esc(t.team_name) + '</td>' +
-          '<td><span class="lb-points">' + t.points + '</span></td></tr>';
-      }).join('') || '<tr><td colspan="3" class="text-dim">No teams yet — be the first to register!</td></tr>';
+        var tier = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+        var icon = rank === 1 ? '<i class="fas fa-crown"></i>' : rank === 2 ? '<i class="fas fa-medal"></i>' : rank === 3 ? '<i class="fas fa-award"></i>' : '';
+        return '<div class="lb-row' + (tier ? ' lb-row-' + tier : '') + '" style="animation-delay:' + (i * 0.06) + 's">' +
+          '<span class="lb-rank">' + icon + ' ' + rank + '</span>' +
+          '<span class="lb-name">' + esc(t.team_name) + '</span>' +
+          '<span class="lb-pts">' + t.points + ' pts</span></div>';
+      }).join('') || '<div class="text-dim" style="padding:1rem;text-align:center">No teams yet — be the first to register!</div>';
     } catch (e) {}
   }
 
@@ -366,17 +367,19 @@
       var rows = await api('GET', '/api/hunt/leaderboard');
       body.innerHTML = rows.map(function (r) {
         var rank = r.rank;
-        var cls = rank === 1 ? 'lb-gold' : rank === 2 ? 'lb-silver' : rank === 3 ? 'lb-bronze' : '';
+        var tier = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
         var dq = r.disqualified;
-        return '<tr' + (dq ? ' class="lb-dq"' : '') + '><td><span class="lb-rank ' + (dq ? '' : cls) + '">' + (rank || '—') + '</span></td>' +
-          '<td>' + esc(r.team_name) + (dq ? ' <span class="lb-dq-tag">[' + esc(dq) + ']</span>' : '') + '</td>' +
-          '<td>' + (r.finished ? '<strong style="color:#4ecb71">10/10 ✓</strong>' : r.progress + '/' + r.total) + '</td>' +
-          '<td>+' + (r.hint_minutes || 0) + 'm <span class="text-dim">(' + (r.hints || 0) + ')</span></td>' +
-          '<td>+' + (r.skip_minutes || 0) + 'm <span class="text-dim">(' + (r.skips || 0) + ')</span></td>' +
-          '<td><span class="lb-points">' + fmtDuration(r.score_seconds) + '</span></td></tr>';
-      }).join('') || '<tr><td colspan="6" class="text-dim">No team has started yet</td></tr>';
+        var icon = rank === 1 ? '<i class="fas fa-crown"></i>' : rank === 2 ? '<i class="fas fa-medal"></i>' : rank === 3 ? '<i class="fas fa-award"></i>' : '';
+        return '<div class="lb-row lb-row-th' + (tier && !dq ? ' lb-row-' + tier : '') + (dq ? ' lb-row-dq' : '') + '" style="animation-delay:' + ((rank - 1) * 0.06) + 's">' +
+          '<span class="lb-rank">' + icon + ' ' + (rank || '—') + '</span>' +
+          '<span class="lb-name">' + esc(r.team_name) + (dq ? ' <span class="lb-dq-tag">[' + esc(dq) + ']</span>' : '') + '</span>' +
+          '<span class="lb-stat">' + (r.finished ? '<strong style="color:#4ecb71">10/10 ✓</strong>' : r.progress + '/' + r.total) + '</span>' +
+          '<span class="lb-stat"><span class="text-dim">Hints</span> +' + (r.hint_minutes || 0) + 'm</span>' +
+          '<span class="lb-stat"><span class="text-dim">Skips</span> +' + (r.skip_minutes || 0) + 'm</span>' +
+          '<span class="lb-pts">' + fmtDuration(r.score_seconds) + '</span></div>';
+      }).join('') || '<div class="text-dim" style="padding:1rem;text-align:center">No team has started yet</div>';
     } catch (e) {
-      body.innerHTML = '<tr><td colspan="6" class="text-dim">Leaderboard unavailable</td></tr>';
+      body.innerHTML = '<div class="text-dim" style="padding:1rem;text-align:center">N/A — Treasure Hunt server not running</div>';
     }
   }
 

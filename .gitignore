@@ -5,3 +5,7 @@ quarks-points.db-wal
 .env
 certs/
 data/
+treasure-hunt/.venv/
+treasure-hunt/__pycache__/
+treasure-hunt/data/
+treasure-hunt/.env

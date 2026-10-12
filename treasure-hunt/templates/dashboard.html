@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<p class="text-dim" style="margin-bottom:0.5rem"><i class="fas fa-users"></i> Team: <strong class="text-accent">{{ team_name }}</strong></p>
+
+{% if phase == "before" %}
+<div class="card">
+    <h2><i class="fas fa-hourglass-start" style="color:var(--secondary)"></i> The hunt hasn't started yet</h2>
+    <p style="margin-top:0.5rem">Duck Duck Loot begins at <strong>10:15 AM</strong> and runs till <strong>1:30 PM</strong>.</p>
+    <p class="points-big" id="countdown" style="margin-top:0.8rem">--:--:--</p>
+</div>
+<script>
+(function() {
+    var start = new Date('{{ hunt_start.isoformat() }}').getTime();
+    var el = document.getElementById('countdown');
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function tick() {
+        var s = Math.max(0, Math.floor((start - Date.now()) / 1000));
+        el.textContent = pad(Math.floor(s / 3600)) + ':' + pad(Math.floor(s / 60) % 60) + ':' + pad(s % 60);
+        if (s === 0) location.reload();
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
+
+{% elif main_completed %}
+<div class="card">
+    <div class="alert alert-success">
+        <i class="fas fa-trophy"></i> You have finished the hunt!
+    </div>
+    <p style="margin-top:0.5rem">Hints used: {{ hints_used }} · Skips used: {{ skips_used }}</p>
+    <a class="btn btn-secondary" href="{{ base }}/leaderboard" style="margin-top:0.8rem"><i class="fas fa-trophy"></i> View Leaderboard</a>
+</div>
+
+{% elif phase == "ended" %}
+<div class="card">
+    <div class="alert alert-danger">
+        <i class="fas fa-flag-checkered"></i> The hunt ended at 1:30 PM.
+    </div>
+    <a class="btn btn-secondary" href="{{ base }}/leaderboard" style="margin-top:0.8rem"><i class="fas fa-trophy"></i> View Leaderboard</a>
+</div>
+
+{% else %}
+<div class="card">
+    <h2><i class="fas fa-compass" style="color:var(--secondary)"></i> Clue {{ main_progress + 1 }} of {{ main_total }}</h2>
+    <h3 style="margin-top:0.5rem;color:var(--text)">{{ main_quest.title }}</h3>
+    <p style="margin-top:0.5rem;white-space:pre-line">{{ main_quest.question }}</p>
+
+    <div class="alert alert-info" style="margin-top:0.8rem">
+        <i class="fas fa-qrcode"></i> Reach the location, scan its QR code and upload a team photo there.
+    </div>
+    <a class="btn" href="{{ qr_scanner_url }}" style="width:100%;justify-content:center;margin-top:0.5rem">
+        <i class="fas fa-camera"></i> Open QR Scanner
+    </a>
+
+    <details class="card" style="margin-top:0.8rem;padding:0.8rem">
+        <summary style="cursor:pointer;font-weight:600"><i class="fas fa-wifi"></i> Can't scan? (no network / camera trouble)</summary>
+        <p class="text-dim" style="font-size:0.85rem;margin-top:0.5rem">At the location, take a clear close-up photo of the QR code and your team photo (works offline). When you're back on the network, upload both here.</p>
+        <form action="{{ base }}/answer/photo" method="post" enctype="multipart/form-data" style="margin-top:0.5rem"
+              onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').innerHTML='Uploading...'">
+            <label>Photo of the QR code</label>
+            <input name="qr_photo" type="file" accept="image/*" required>
+            <label style="margin-top:0.5rem;display:block">Team photo at the location</label>
+            <input name="photo" type="file" accept="image/*" required>
+            <button type="submit" class="btn" style="width:100%;justify-content:center;margin-top:0.8rem">
+                <i class="fas fa-upload"></i> Upload &amp; Complete Clue
+            </button>
+        </form>
+    </details>
+
+    {% for h in hints_shown %}
+    <div class="alert alert-info" style="margin-top:0.8rem">
+        <i class="fas fa-lightbulb"></i> <strong>Hint {{ loop.index }}:</strong> {{ h }}
+    </div>
+    {% endfor %}
+    {% if hints_left > 0 %}
+    <form action="{{ base }}/hint" method="post" style="margin-top:0.8rem"
+          onsubmit="return confirm('Using a hint adds {{ hint_penalty }} minutes to your final time. Continue?')">
+        <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center">
+            <i class="fas fa-lightbulb"></i> Get Hint {{ hints_shown|length + 1 }} (+{{ hint_penalty }} min)
+        </button>
+    </form>
+    {% endif %}
+
+    {% if skips_left > 0 %}
+    <form action="{{ base }}/skip" method="post" style="margin-top:0.5rem"
+          onsubmit="return confirm('Skipping adds {{ skip_penalty }} minutes to your final time. You only get ONE skip. Continue?')">
+        <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center">
+            <i class="fas fa-forward"></i> Skip Clue (+{{ skip_penalty }} min, {{ skips_left }} left)
+        </button>
+    </form>
+    {% else %}
+    <p class="text-dim" style="margin-top:0.5rem;font-size:0.8rem">You have used your skip.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2><i class="fas fa-stopwatch" style="color:var(--accent)"></i> Your Progress</h2>
+    <div style="display:flex;gap:2rem;margin-top:0.5rem">
+        <div>
+            <p class="text-dim" style="font-size:0.75rem">Clues</p>
+            <p class="points-big">{{ main_progress }}/{{ main_total }}</p>
+        </div>
+        <div>
+            <p class="text-dim" style="font-size:0.75rem">Penalty</p>
+            <p class="points-big">+{{ hints_used * hint_penalty + skips_used * skip_penalty }}m</p>
+        </div>
+    </div>
+    <p class="text-dim" style="font-size:0.75rem;margin-top:0.5rem">Hunt closes at 1:30 PM. Least final time (finish time from 10:15 AM + penalties) wins.</p>
+</div>
+{% endif %}
+{% endblock %}

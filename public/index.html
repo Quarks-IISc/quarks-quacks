@@ -97,32 +97,15 @@
           </a>
         </div>
 
-        <!-- Quick Rules -->
-        <div class="home-section rules-section">
-          <h2 class="section-title"><i class="fas fa-gavel"></i> Quick Rules</h2>
-          <div class="rules-grid" id="rules-grid">
-            <div class="rule-card">
-              <div class="rule-icon"><i class="fas fa-map-marked-alt"></i></div>
-              <h3>Side Quests</h3>
-              <ul>
-                <li><strong>Only 1 team</strong> can win each side quest: the first correct answer takes it, and then it's gone.</li>
-                <li>You get <strong>only 1 try</strong> per side quest, so make it count.</li>
-                <li>Side quest points add straight to your <strong>Quacks points</strong>.</li>
-              </ul>
-            </div>
-            <div class="rule-card">
-              <div class="rule-icon"><i class="fas fa-search-location"></i></div>
-              <h3>Treasure Hunt</h3>
-              <ul>
-                <li>Starts at <strong>10:15 AM sharp</strong>.</li>
-                <li>10 problems: the <strong>first 5 come in a random order</strong> for each team, and the <strong>last 5 are in a fixed order</strong>.</li>
-                <li><strong>Upload your team picture</strong> at every location for verification. If you don't, you will be <strong>disqualified</strong>.</li>
-                <li>If you start late, <strong>no compensation</strong> will be given.</li>
-                <li>Closes at <strong>1:30 PM sharp</strong>.</li>
-              </ul>
-            </div>
+        <!-- Grand Prize Card -->
+        <a href="https://whatsapp.com/channel/0029Vb8qihZ1HsppFp6b2m3b/154" target="_blank" rel="noopener noreferrer" class="grand-prize-card">
+          <div class="grand-prize-glow"></div>
+          <div class="grand-prize-content">
+            <span class="grand-prize-icon"><i class="fas fa-gift"></i></span>
+            <span class="grand-prize-text">Curious about the Grand Prize?</span>
+            <span class="grand-prize-arrow"><i class="fas fa-arrow-right"></i></span>
           </div>
-        </div>
+        </a>
 
         <!-- Schedule popup -->
         <div class="schedule-overlay" id="schedule-overlay">
@@ -200,30 +183,16 @@
         <!-- Embedded Leaderboard -->
         <div class="home-section pre-event-hide" id="lb-section">
           <h2 class="section-title"><i class="fas fa-trophy"></i> Leaderboard</h2>
-          <div class="card card-wide">
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>#</th><th>Team</th><th>Points</th></tr></thead>
-                <tbody id="home-lb-body">
-                  <tr><td colspan="3" class="text-dim">Loading…</td></tr>
-                </tbody>
-              </table>
-            </div>
+          <div id="home-lb-body" class="lb-card-list">
+            <div class="text-dim" style="padding:1rem;text-align:center">Loading…</div>
           </div>
         </div>
 
         <!-- Treasure Hunt Leaderboard -->
         <div class="home-section pre-event-hide" id="th-lb-section">
           <h2 class="section-title"><i class="fas fa-search-location"></i> Treasure Hunt Leaderboard</h2>
-          <div class="card card-wide">
-            <div class="table-wrap">
-              <table>
-                <thead><tr><th>#</th><th>Team</th><th>Clues</th><th>Hint Delay</th><th>Skip Delay</th><th>Final Time</th></tr></thead>
-                <tbody id="th-lb-body">
-                  <tr><td colspan="6" class="text-dim">Loading…</td></tr>
-                </tbody>
-              </table>
-            </div>
+          <div id="th-lb-body" class="lb-card-list">
+            <div class="text-dim" style="padding:1rem;text-align:center">Loading…</div>
           </div>
         </div>
 

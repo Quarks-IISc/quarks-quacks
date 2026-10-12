@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard{% endblock %}
+{% block content %}
+<div class="card">
+    <h2><i class="fas fa-trophy" style="color:var(--accent)"></i> Duck Duck Loot Leaderboard</h2>
+    <p class="text-dim" style="font-size:0.8rem;margin-top:0.3rem">Ranked by clues completed, then time (from 10:15 AM to the last clue reached) + 29 min per skip + 12 min per hint. Least time wins.</p>
+    <div style="overflow-x:auto;margin-top:0.8rem">
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
+        <thead><tr style="text-align:left"><th>#</th><th>Team</th><th>Clues</th><th>Hint Delay</th><th>Skip Delay</th><th>Final Time</th></tr></thead>
+        <tbody>
+        {% for r in rows %}
+        <tr{% if r.disqualified %} style="text-decoration:line-through;opacity:0.55"{% endif %}>
+            <td>{% if r.rank %}<strong>{{ r.rank }}</strong>{% else %}—{% endif %}</td>
+            <td>{{ r.team_name }}{% if r.disqualified %} <span style="text-decoration:none;display:inline-block;color:var(--danger);font-weight:700">[{{ r.disqualified }}]</span>{% endif %}</td>
+            <td>{% if r.finished %}<strong style="color:var(--success)">10/10 ✓</strong>{% else %}{{ r.progress }}/{{ r.total }}{% endif %}</td>
+            <td>+{{ r.hint_minutes }}m <span class="text-dim">({{ r.hints }})</span></td>
+            <td>+{{ r.skip_minutes }}m <span class="text-dim">({{ r.skips }})</span></td>
+            <td><strong>{% if r.score_seconds is not none %}{{ '%02d:%02d:%02d' % (r.score_seconds // 3600, (r.score_seconds // 60) % 60, r.score_seconds % 60) }}{% else %}—{% endif %}</strong></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-dim">No team has started yet.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+<script>setTimeout(function() { location.reload(); }, 30000);</script>
+{% endblock %}
